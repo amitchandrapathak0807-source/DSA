@@ -1,0 +1,135 @@
+# Strings (Advanced) — Miscellaneous Problems
+
+## 1. Count and Say Sequence
+
+**Problem Statement:**
+The count-and-say sequence is a sequence of digit strings defined by the recursive formula:
+- `countAndSay(1) = "1"`
+- `countAndSay(n)` is the run-length encoded version of `countAndSay(n - 1)`.
+
+To generate the run-length encoding of a string, scan it left to right, grouping consecutive identical characters together. For each group, output the count of characters in the group followed by the character itself.
+Given a positive integer `n`, return the `n`th term of the count-and-say sequence.
+
+**Example:**
+- Input: `n = 4`
+- Output: `"1211"`
+- Explanation: `countAndSay(1) = "1"`, `countAndSay(2) = "11"` (one 1), `countAndSay(3) = "21"` (two 1s), `countAndSay(4) = "1211"` (one 2, one 1).
+
+**Approach:**
+Start with the base term `"1"`. Iteratively build each next term from the current term using run-length encoding: walk through the current string with a pointer, and while the next character equals the current one, extend the run and increment a counter. Once the run breaks (or the string ends), append the run's length followed by the repeated character to a `StringBuilder`. Move the pointer to the start of the next run and repeat until the whole string is consumed. Do this `n - 1` times starting from `"1"` to reach the `n`th term.
+
+```csharp
+using System;
+using System.Text;
+
+public class CountAndSay
+{
+    public string CountAndSaySequence(int n)
+    {
+        string current = "1";
+
+        for (int term = 2; term <= n; term++)
+        {
+            current = RunLengthEncode(current);
+        }
+
+        return current;
+    }
+
+    private string RunLengthEncode(string s)
+    {
+        StringBuilder result = new StringBuilder();
+        int i = 0;
+
+        while (i < s.Length)
+        {
+            char currentChar = s[i];
+            int count = 0;
+
+            while (i < s.Length && s[i] == currentChar)
+            {
+                count++;
+                i++;
+            }
+
+            result.Append(count);
+            result.Append(currentChar);
+        }
+
+        return result.ToString();
+    }
+}
+```
+
+**Time Complexity:** `O(n * L)`, where `L` is the length of the longest generated term (the string length can grow exponentially in the worst case, but for practical/interview-sized `n` this is treated as the dominant per-term encoding cost across `n - 1` iterations).
+**Space Complexity:** `O(L)` to hold the current and next term (the `StringBuilder` buffer), where `L` is the length of the term being built.
+
+**Explanation:**
+Dry run building the sequence up to the 4th term:
+
+1. `term 1`: `"1"` (base case, given directly).
+2. `term 2`: encode `"1"` → scan finds one run of `'1'` of length 1 → append `"1"` + `'1'` → result `"11"`.
+3. `term 3`: encode `"11"` → scan finds one run of `'1'` of length 2 → append `"2"` + `'1'` → result `"21"`.
+4. `term 4`: encode `"21"` → scan finds two runs: `'2'` of length 1 → append `"1"` + `'2'` → then `'1'` of length 1 → append `"1"` + `'1'` → result `"1211"`.
+
+Final answer for `n = 4` is `"1211"`, matching the sequence `"1" -> "11" -> "21" -> "1211"`.
+
+## 2. Compare Version Numbers
+
+**Problem Statement:**
+Given two version numbers `version1` and `version2` as strings, where each version consists of one or more revisions separated by dots (`'.'`), compare them. Each revision is a numeric string, but it may contain leading zeros (e.g., `"01"` represents the same value as `"1"`). If a version has fewer revisions than the other, treat the missing revisions as `0`. Return `1` if `version1 > version2`, `-1` if `version1 < version2`, and `0` if they are equal.
+
+**Example:**
+- Input: `version1 = "1.01", version2 = "1.001"`
+- Output: `0`
+- Explanation: Ignoring leading zeros, both `"01"` and `"001"` represent the numeric value `1`, and the first segments (`"1"` vs `"1"`) are equal, so the versions are equal.
+
+**Approach:**
+Split both version strings on `'.'` using `string.Split('.')` to get their revision segments as string arrays. Iterate over the maximum number of segments between the two arrays. For each index, retrieve the segment from each array if it exists, or use `"0"` as a default when one version has run out of segments (padding the shorter version). Convert each segment to an integer with `int.Parse`, which naturally strips any leading zeros. Compare the two integers: if they differ, immediately return `1` or `-1` accordingly. If every corresponding segment is equal after checking all segments, the versions are equal, so return `0`.
+
+```csharp
+using System;
+
+public class CompareVersionNumbers
+{
+    public int CompareVersion(string version1, string version2)
+    {
+        string[] segments1 = version1.Split('.');
+        string[] segments2 = version2.Split('.');
+
+        int maxLength = Math.Max(segments1.Length, segments2.Length);
+
+        for (int i = 0; i < maxLength; i++)
+        {
+            int value1 = i < segments1.Length ? int.Parse(segments1[i]) : 0;
+            int value2 = i < segments2.Length ? int.Parse(segments2[i]) : 0;
+
+            if (value1 != value2)
+            {
+                return value1 > value2 ? 1 : -1;
+            }
+        }
+
+        return 0;
+    }
+}
+```
+
+**Time Complexity:** `O(n + m)`, where `n` and `m` are the lengths of `version1` and `version2` respectively (splitting and parsing each segment is linear in the total input length).
+**Space Complexity:** `O(n + m)` for storing the split segment arrays of both versions.
+
+**Explanation:**
+Dry run comparing `"1.01"` vs `"1.001"`:
+
+1. Split: `segments1 = ["1", "01"]`, `segments2 = ["1", "001"]`. `maxLength = 2`.
+2. Index 0: `value1 = int.Parse("1") = 1`, `value2 = int.Parse("1") = 1`. Equal, continue.
+3. Index 1: `value1 = int.Parse("01") = 1` (leading zero stripped), `value2 = int.Parse("001") = 1` (leading zeros stripped). Equal, continue.
+4. Loop ends with no differences found → return `0` (versions are equal).
+
+Dry run comparing `"1.0"` vs `"1.0.0"` to show padding logic:
+
+1. Split: `segments1 = ["1", "0"]` (length 2), `segments2 = ["1", "0", "0"]` (length 3). `maxLength = 3`.
+2. Index 0: `value1 = 1`, `value2 = 1`. Equal, continue.
+3. Index 1: `value1 = 0`, `value2 = 0`. Equal, continue.
+4. Index 2: `segments1` has no element at index 2 (its length is only 2), so `value1` defaults to `0`. `segments2[2] = "0"`, so `value2 = 0`. Equal, continue.
+5. Loop ends with no differences found → return `0` (the missing trailing revision in `version1` is treated as `0`, making `"1.0"` equal to `"1.0.0"`).

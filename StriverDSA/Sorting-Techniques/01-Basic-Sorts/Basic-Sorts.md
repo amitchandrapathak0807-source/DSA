@@ -14,6 +14,12 @@
 **Approach:**
 Selection Sort divides the array into a sorted prefix and an unsorted suffix. On each iteration `i` (from `0` to `n-2`), it scans the unsorted suffix `arr[i..n-1]` to find the index of the minimum element, then swaps that minimum element into position `i`. The invariant is that after `i` iterations, `arr[0..i-1]` contains the `i` smallest elements of the array in sorted order, and every element in `arr[0..i-1]` is `<=` every element in `arr[i..n-1]`.
 
+**Logic (Steps):**
+1. For each index `i` from `0` to `n-2`, assume `arr[i]` is the minimum and record `minIndex = i`.
+2. Scan the rest of the unsorted suffix (`j` from `i+1` to `n-1`); whenever `arr[j] < arr[minIndex]`, update `minIndex = j`.
+3. After scanning the full suffix, if `minIndex != i`, swap `arr[i]` and `arr[minIndex]` to place the true minimum at position `i`.
+4. Move to the next `i`; the sorted prefix grows by one element each iteration until the whole array is sorted.
+
 ```csharp
 public static void SelectionSort(int[] arr)
 {

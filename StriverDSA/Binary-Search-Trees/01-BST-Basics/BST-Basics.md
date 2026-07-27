@@ -61,6 +61,12 @@ This is why self-balancing BSTs (AVL, Red-Black trees) exist — they guarantee 
 
 This is a direct application of binary search: each comparison eliminates one entire subtree.
 
+**Logic (Steps):**
+1. Start `current` at the root.
+2. Loop while `current` is not `null` and `current.val != target`.
+3. If `target < current.val`, move `current = current.left`; otherwise move `current = current.right`.
+4. When the loop ends, `current` is either the matching node or `null` (target not found) — return it.
+
 ```csharp
 public TreeNode SearchBST(TreeNode root, int target) {
     TreeNode current = root;
@@ -73,12 +79,12 @@ public TreeNode SearchBST(TreeNode root, int target) {
 
 Time Complexity: O(h) where h is the height of the tree — O(log n) for a balanced BST, O(n) worst-case for a skewed BST. Space Complexity: O(1) for the iterative version shown (O(h) if implemented recursively, due to the call stack).
 
-**Explanation:** Dry run on the example BST with `target = 6`:
+**Walkthrough:** Dry run on the example BST with `target = 6`:
 1. `current = 8` (root). `6 < 8` → go left. `current = 3`.
 2. `current = 3`. `6 > 3` → go right. `current = 6`.
 3. `current = 6`. `6 == 6` → match found, return this node.
 
-Only 3 nodes were visited out of 6 total nodes, and no comparison ever needed to look at node `10` or `14` — the entire right subtree of the root was discarded after the very first comparison.
+Only 3 nodes were visited out of 6 total nodes, and no comparison ever needed to look at node `10` or `14` — the entire right subtree of the root was discarded after the very first comparison, confirming the output is the subtree rooted at node `6`.
 
 ---
 
@@ -91,6 +97,10 @@ Only 3 nodes were visited out of 6 total nodes, and no comparison ever needed to
 - Output: Minimum = `1`, Maximum = `14`
 
 **Approach:** Because of the BST invariant, the **minimum value is always the leftmost node** (keep following `.left` until it's `null`), and the **maximum value is always the rightmost node** (keep following `.right` until it's `null`). There is no need to compare values at all — the structure guarantees the answer's location, so you simply walk down one path.
+
+**Logic (Steps):**
+1. For the minimum, start `current` at the root and repeatedly move `current = current.left` until `current.left == null`; return `current.val`.
+2. For the maximum, start `current` at the root and repeatedly move `current = current.right` until `current.right == null`; return `current.val`.
 
 ```csharp
 public int FindMin(TreeNode root) {
@@ -114,7 +124,7 @@ public int FindMax(TreeNode root) {
 
 Time Complexity: O(h) where h is the height — O(log n) balanced, O(n) worst-case skewed. Space Complexity: O(1) iterative.
 
-**Explanation:** For minimum: start at `8` → go left to `3` → go left to `1` → `1.left` is `null`, so `1` is the minimum. For maximum: start at `8` → go right to `10` → go right to `14` → `14.right` is `null`, so `14` is the maximum. Each walk only touches the nodes along a single path, never branching into the other subtree.
+**Walkthrough:** For minimum: start at `8` → go left to `3` → go left to `1` → `1.left` is `null`, so `1` is the minimum. For maximum: start at `8` → go right to `10` → go right to `14` → `14.right` is `null`, so `14` is the maximum. Each walk only touches the nodes along a single path, never branching into the other subtree, matching the expected output `Minimum = 1, Maximum = 14`.
 
 ---
 
@@ -130,6 +140,14 @@ Time Complexity: O(h) where h is the height — O(log n) balanced, O(n) worst-ca
 - If `node.val == target`, that's the exact ceil — return immediately.
 - If `node.val < target`, this node is too small to be a ceil; the ceil (if any) must be in the right subtree — move right without recording this node.
 - If `node.val > target`, this node is a *candidate* ceil (it's `>= target`); record it, then try to find something smaller by moving left — a smaller valid ceil might exist there.
+
+**Logic (Steps):**
+1. Initialize `ceil = -1` and `current = root`.
+2. Loop while `current != null`.
+3. If `current.val == target`, return `current.val` immediately (exact match).
+4. If `current.val < target`, this node is too small, move `current = current.right`.
+5. Otherwise (`current.val > target`), record `ceil = current.val` as a candidate and move `current = current.left` to look for a tighter one.
+6. When `current` becomes `null`, return the last recorded `ceil`.
 
 ```csharp
 public int FindCeil(TreeNode root, int target) {
@@ -151,11 +169,11 @@ public int FindCeil(TreeNode root, int target) {
 
 Time Complexity: O(h) where h is the height — O(log n) balanced, O(n) worst-case skewed. Space Complexity: O(1) iterative.
 
-**Explanation:** Dry run with `target = 7` on `[8, 3, 10, 1, 6, null, 14]`:
+**Walkthrough:** Dry run with `target = 7` on `[8, 3, 10, 1, 6, null, 14]`:
 1. `current = 8`. `8 > 7` → candidate `ceil = 8`, move left to `3`.
 2. `current = 3`. `3 < 7` → too small, move right to `6`.
 3. `current = 6`. `6 < 7` → too small, move right to `null`.
-4. Loop ends. Return `ceil = 8`.
+4. Loop ends. Return `ceil = 8`, matching the expected output.
 
 Each comparison either tightens the candidate or eliminates a subtree that provably cannot contain a better answer.
 
@@ -173,6 +191,14 @@ Each comparison either tightens the candidate or eliminates a subtree that prova
 - If `node.val == target`, that's the exact floor — return immediately.
 - If `node.val > target`, this node is too large to be a floor; move left without recording it.
 - If `node.val < target`, this node is a *candidate* floor (it's `<= target`); record it, then try to find something larger by moving right.
+
+**Logic (Steps):**
+1. Initialize `floor = -1` and `current = root`.
+2. Loop while `current != null`.
+3. If `current.val == target`, return `current.val` immediately (exact match).
+4. If `current.val > target`, this node is too large, move `current = current.left`.
+5. Otherwise (`current.val < target`), record `floor = current.val` as a candidate and move `current = current.right` to look for a tighter one.
+6. When `current` becomes `null`, return the last recorded `floor`.
 
 ```csharp
 public int FindFloor(TreeNode root, int target) {
@@ -194,11 +220,11 @@ public int FindFloor(TreeNode root, int target) {
 
 Time Complexity: O(h) where h is the height — O(log n) balanced, O(n) worst-case skewed. Space Complexity: O(1) iterative.
 
-**Explanation:** Dry run with `target = 7` on `[8, 3, 10, 1, 6, null, 14]`:
+**Walkthrough:** Dry run with `target = 7` on `[8, 3, 10, 1, 6, null, 14]`:
 1. `current = 8`. `8 > 7` → too large, move left to `3`.
 2. `current = 3`. `3 < 7` → candidate `floor = 3`, move right to `6`.
 3. `current = 6`. `6 < 7` → candidate `floor = 6`, move right to `null`.
-4. Loop ends. Return `floor = 6`.
+4. Loop ends. Return `floor = 6`, matching the expected output.
 
 ---
 
@@ -211,6 +237,13 @@ Time Complexity: O(h) where h is the height — O(log n) balanced, O(n) worst-ca
 - Output: BST `[8, 3, 10, 1, 6, null, null, null, null, null, 7]` — `7` is inserted as the right child of `6`, since `7 > 3` (go right... actually `7 < 8` go left, `7 > 3` go right, `7 > 6` go right) → becomes `6`'s right child.
 
 **Approach:** New values are always inserted as a **leaf**. Walk down from the root exactly like `SearchBST`, comparing `val` against each node to decide left or right, until you fall off the tree (reach `null`) — that `null` spot is exactly where the new node belongs, since the BST property guarantees no ordering violation results from placing it there. Attach the new node at that position.
+
+**Logic (Steps):**
+1. If the tree is empty (`root == null`), return a new node with `val` as the tree.
+2. Otherwise start `current` at the root and loop indefinitely.
+3. If `val < current.val`, check `current.left`: if `null`, attach the new node there and stop; else move `current = current.left`.
+4. Otherwise, check `current.right`: if `null`, attach the new node there and stop; else move `current = current.right`.
+5. Return the (unchanged) `root`.
 
 ```csharp
 public TreeNode InsertIntoBST(TreeNode root, int val) {
@@ -240,7 +273,7 @@ public TreeNode InsertIntoBST(TreeNode root, int val) {
 
 Time Complexity: O(h) where h is the height — O(log n) balanced, O(n) worst-case skewed. Space Complexity: O(1) iterative (O(h) if done recursively).
 
-**Explanation:** Dry run inserting `7` into `[8, 3, 10, 1, 6]`:
+**Walkthrough:** Dry run inserting `7` into `[8, 3, 10, 1, 6]`:
 1. `current = 8`. `7 < 8` → go left; `8.left = 3` is not null, so `current = 3`.
 2. `current = 3`. `7 > 3` → go right; `3.right = 6` is not null, so `current = 6`.
 3. `current = 6`. `7 > 6` → go right; `6.right` is `null` → attach `new TreeNode(7)` as `6.right`, done.
@@ -262,6 +295,14 @@ The BST property is preserved automatically: `7` sits between `6` and `8` in sor
 1. **Leaf node (no children):** Simply remove it — replace it with `null` in its parent.
 2. **One child (only left or only right):** Replace the node with its single child — the child subtree already satisfies the BST property relative to the parent, so it can be spliced in directly.
 3. **Two children:** You cannot just delete the node, since two subtrees would need to be reattached. Instead, find a replacement value that preserves ordering: the **inorder successor** (the smallest value in the right subtree, i.e., the leftmost node of the right subtree) — or equivalently the inorder predecessor (largest value in the left subtree). Copy that successor's value into the current node, then recursively delete the successor from the right subtree (where it is guaranteed to be a leaf or have only a right child, making that deletion simpler).
+
+**Logic (Steps):**
+1. If `root == null`, there's nothing to delete — return `null`.
+2. If `key < root.val`, recurse into `root.left`; if `key > root.val`, recurse into `root.right`.
+3. Once `root.val == key` is found: if `root.left == null`, return `root.right` (handles leaf and only-right-child); if `root.right == null`, return `root.left` (only-left-child).
+4. Otherwise (two children), walk `successor` from `root.right` down `.left` pointers to find the inorder successor (minimum of right subtree).
+5. Copy `successor.val` into `root.val`, then recursively delete `successor.val` from `root.right` to remove the duplicate.
+6. Return `root` after each recursive step reattaches the updated subtree.
 
 ```csharp
 public TreeNode DeleteNode(TreeNode root, int key) {
@@ -301,7 +342,7 @@ public TreeNode DeleteNode(TreeNode root, int key) {
 
 Time Complexity: O(h) where h is the height — O(log n) balanced, O(n) worst-case skewed (finding the node plus finding/removing the successor are both bounded by a root-to-leaf path). Space Complexity: O(h) recursion stack (can be rewritten iteratively for O(1) auxiliary space).
 
-**Explanation:** Dry run deleting `key = 3` from `[8, 3, 10, 1, 6, null, 14]` (node `3` has two children: `1` on the left, `6` on the right):
+**Walkthrough:** Dry run deleting `key = 3` from `[8, 3, 10, 1, 6, null, 14]` (node `3` has two children: `1` on the left, `6` on the right):
 
 1. Start at `8`: `3 < 8` → recurse left into `3`'s subtree.
 2. At `3`: `3 == 3` → this is the node to delete. It has both `left = 1` and `right = 6`, so this is the **two-children case**.
@@ -323,6 +364,14 @@ Result: the tree now reads `8 → (6 → (1, null), 10 → (null, 14))`. The BST
 - Output: `6` (sorted order of all values is `1, 3, 6, 8, 10, 14`; the 3rd smallest is `6`)
 
 **Approach:** Recall from the BST property that an **inorder traversal (left, node, right) visits nodes in strictly ascending sorted order**. So the k-th smallest element is simply the k-th node visited during an inorder traversal. Rather than generating the entire sorted list (which costs extra space and doesn't stop early), use an **iterative inorder traversal with an explicit stack**, maintaining a counter that increments each time a node is "visited" (popped and processed) — as soon as the counter reaches `k`, stop immediately and return that node's value, without traversing the rest of the tree. For k-th largest, do the mirror traversal (right, node, left), which visits nodes in descending order.
+
+**Logic (Steps):**
+1. Use an explicit `stack` and `current = root`, with a `count = 0` visited-nodes counter.
+2. Loop while `current != null` or the stack is non-empty.
+3. Push nodes while going as far left as possible (`current = current.left`) — this reaches the smallest unvisited value first.
+4. Pop the top of the stack as the next node to "visit"; increment `count`. If `count == k`, return this node's value immediately.
+5. Otherwise move `current = current.right` to process that node's right subtree next (same left-then-visit process resumes).
+6. (`KthLargest` is the mirror: push while going right, visit, then move into `current.left`.)
 
 ```csharp
 public int KthSmallest(TreeNode root, int k) {
@@ -380,7 +429,7 @@ public int KthLargest(TreeNode root, int k) {
 
 Time Complexity: O(h + k) in the general case (at most O(n) if k is close to n) — since only the path down plus k pops are processed before stopping early; the worst case relates to n rather than a clean O(h), but the early stop makes it far cheaper than a full O(n) traversal for small k. Space Complexity: O(h) for the stack — O(log n) balanced, O(n) worst-case skewed.
 
-**Explanation:** Dry run `KthSmallest` with `k = 3` on `[8, 3, 10, 1, 6, null, 14]`:
+**Walkthrough:** Dry run `KthSmallest` with `k = 3` on `[8, 3, 10, 1, 6, null, 14]`:
 
 1. `current = 8`, stack empty. Push `8`, move to `8.left = 3`. Push `3`, move to `3.left = 1`. Push `1`, move to `1.left = null`. Stack: `[8, 3, 1]` (top is `1`).
 2. Inner while ends (`current == null`). Pop `1`. `count = 1`. Not `k` yet. Move to `1.right = null`, so `current = null`.

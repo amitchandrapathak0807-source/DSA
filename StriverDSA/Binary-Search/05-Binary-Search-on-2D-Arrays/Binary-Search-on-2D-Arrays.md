@@ -20,6 +20,12 @@ Given a binary matrix (each cell is either `0` or `1`) where every row is sorted
 **Brute Force Approach:**
 Scan every cell of the matrix, count the number of `1`s in each row using a simple linear traversal, and keep track of the row with the maximum count.
 
+**Logic (Steps):**
+1. Initialize `maxCount = -1` and `maxRowIndex = -1`.
+2. For each row `i`, walk every column `j` and increment a local `countOnes` whenever `matrix[i, j] == 1`.
+3. After finishing a row, compare `countOnes` with `maxCount`; if it is strictly greater, update `maxCount` and `maxRowIndex` to this row.
+4. After all rows are scanned, return `maxRowIndex` (stays `-1` if no row had any `1`).
+
 ```csharp
 public int RowWithMax1sBrute(int[,] matrix)
 {
@@ -54,8 +60,19 @@ public int RowWithMax1sBrute(int[,] matrix)
 Time Complexity: `O(n * m)` — every cell of the matrix is visited once.
 Space Complexity: `O(1)` — no extra space used.
 
+**Walkthrough:** On `matrix = [[0,0,0,1],[0,1,1,1],[0,0,1,1]]`: row 0 scans `0,0,0,1` → `countOnes = 1` → `maxCount = 1, maxRowIndex = 0`. Row 1 scans `0,1,1,1` → `countOnes = 3` → `3 > 1` so `maxCount = 3, maxRowIndex = 1`. Row 2 scans `0,0,1,1` → `countOnes = 2` → `2 > 3` is false, no update. Final `maxRowIndex = 1`, matching the expected output.
+
+---
+
 **Optimized Approach:**
 Since each row is sorted, the count of `1`s in a row equals `cols - (index of first 1)`. We can binary search for the "lower bound" of `1` in each row instead of scanning it linearly. This reduces the per-row cost from `O(m)` to `O(log m)`.
+
+**Logic (Steps):**
+1. For each row `i`, run a binary search over columns `[0, cols-1]` looking for the leftmost `1` (`LowerBoundOfOne`).
+2. In that binary search, if `matrix[row, mid] == 1`, record `mid` as a candidate first-one index and search left (`high = mid - 1`) for an earlier `1`; otherwise search right (`low = mid + 1`).
+3. Convert the returned `firstOneIndex` into a count: `cols - firstOneIndex` if a `1` was found, else `0`.
+4. Compare this row's count to `maxCount`, updating `maxCount`/`maxRowIndex` when it's strictly greater.
+5. Return `maxRowIndex` after all rows are processed.
 
 ```csharp
 public int RowWithMax1sOptimized(int[,] matrix)
@@ -109,8 +126,7 @@ private int LowerBoundOfOne(int[,] matrix, int row, int cols)
 Time Complexity: `O(n * log m)` — for each of the `n` rows we binary search over `m` columns.
 Space Complexity: `O(1)` — only a constant number of extra variables are used.
 
-**Explanation:**
-Row-wise binary search works because each row is individually sorted (`0`s then `1`s), so the index of the first `1` can be found with a standard "find lower bound of 1" binary search: if `matrix[row, mid] == 1`, the first `1` could be at `mid` or earlier, so we record it and move `high = mid - 1`; otherwise we move `low = mid + 1`. Once we know the first `1`'s index for a row, the count of `1`s in that row is simply `cols - firstOneIndex`. Comparing this count across all rows (keeping the first row seen for ties, due to `>` not `>=`) gives the row with the maximum number of `1`s in `O(n log m)` instead of `O(n * m)`.
+**Walkthrough:** On `matrix = [[0,0,0,1],[0,1,1,1],[0,0,1,1]]`: row 0 binary search over `[0,0,0,1]` finds `firstOneIndex = 3` → count `4-3=1` → `maxCount=1, maxRowIndex=0`. Row 1 over `[0,1,1,1]` finds `firstOneIndex = 1` → count `4-1=3` → `3>1` → `maxCount=3, maxRowIndex=1`. Row 2 over `[0,0,1,1]` finds `firstOneIndex = 2` → count `4-2=2` → `2>3` is false, no update. Final `maxRowIndex = 1`, matching the expected output `1`.
 
 ---
 
@@ -128,6 +144,12 @@ Given an `n x m` matrix where every row is sorted left to right in increasing or
 
 **Brute Force Approach:**
 Simply scan every cell of the matrix and check if it equals the target.
+
+**Logic (Steps):**
+1. Iterate every row `i` from `0` to `rows-1`.
+2. For each row, iterate every column `j` from `0` to `cols-1`.
+3. If `matrix[i, j] == target`, return `true` immediately.
+4. If the full scan finishes without a match, return `false`.
 
 ```csharp
 public bool SearchMatrixIIBrute(int[,] matrix, int target)
@@ -153,8 +175,20 @@ public bool SearchMatrixIIBrute(int[,] matrix, int target)
 Time Complexity: `O(n * m)` — every cell may be visited.
 Space Complexity: `O(1)` — no extra space used.
 
+**Walkthrough:** On `matrix = [[1,4,7,11],[2,5,8,12],[3,6,9,16],[10,13,14,17]]`, `target = 5`: the scan visits row 0 (`1,4,7,11`, no match), then row 1 (`2`, no match; `5` — match!) and returns `true` immediately, matching the expected output.
+
+---
+
 **Optimized Approach:**
 Start from the top-right corner (or bottom-left corner). At every step, if the current element equals the target, return `true`. If the current element is greater than the target, the entire column below it can be eliminated (move left). If it is smaller than the target, the entire row to its left can be eliminated (move down). This uses the sorted property in both dimensions to eliminate one row or one column per comparison.
+
+**Logic (Steps):**
+1. Start pointers at `row = 0` and `col = cols - 1` (top-right corner).
+2. Loop while `row < rows` and `col >= 0`, reading `current = matrix[row, col]`.
+3. If `current == target`, return `true` immediately.
+4. If `current > target`, the whole column below is even larger, so eliminate it by decrementing `col`.
+5. If `current < target`, the whole row to the left is even smaller, so eliminate it by incrementing `row`.
+6. If the pointers move out of bounds without a match, return `false`.
 
 ```csharp
 public bool SearchMatrixIIOptimized(int[,] matrix, int target)
@@ -190,14 +224,11 @@ public bool SearchMatrixIIOptimized(int[,] matrix, int target)
 Time Complexity: `O(n + m)` — in the worst case we move down `n` times and left `m` times, a total of at most `n + m` steps.
 Space Complexity: `O(1)` — only pointers `row` and `col` are used.
 
-**Explanation:**
-Dry run on `matrix = [[1,4,7,11],[2,5,8,12],[3,6,9,16],[10,13,14,17]]`, `target = 5`:
+**Walkthrough:** On `matrix = [[1,4,7,11],[2,5,8,12],[3,6,9,16],[10,13,14,17]]`, `target = 5`:
 - Start at `row = 0, col = 3` → `matrix[0,3] = 11`. `11 > 5`, so move left: `col = 2`.
 - `matrix[0,2] = 7`. `7 > 5`, so move left: `col = 1`.
 - `matrix[0,1] = 4`. `4 < 5`, so move down: `row = 1`.
-- `matrix[1,1] = 5`. `5 == 5` → return `true`.
-
-The technique works because starting at the top-right corner, the current cell is the largest in its row and the smallest in its column. If the current value is greater than the target, the target cannot be anywhere in the current column (since everything below is even larger), so we safely discard the whole column by decrementing `col`. If the current value is smaller than the target, the target cannot be anywhere in the current row (everything to the left is even smaller), so we safely discard the whole row by incrementing `row`. Each comparison eliminates exactly one row or one column, bounding the total work at `O(n + m)`.
+- `matrix[1,1] = 5`. `5 == 5` → return `true`, matching the expected output.
 
 ---
 
@@ -215,6 +246,12 @@ Given an `n x m` matrix where each row is sorted in increasing order, and the fi
 
 **Brute Force Approach:**
 Scan every cell of the matrix (or every element of an equivalent flattened traversal) and check for equality with the target.
+
+**Logic (Steps):**
+1. Iterate every row `i` from `0` to `rows-1`.
+2. For each row, iterate every column `j` from `0` to `cols-1`.
+3. If `matrix[i, j] == target`, return `true` immediately.
+4. If the full scan finishes without a match, return `false`.
 
 ```csharp
 public bool SearchMatrixIBrute(int[,] matrix, int target)
@@ -240,8 +277,20 @@ public bool SearchMatrixIBrute(int[,] matrix, int target)
 Time Complexity: `O(n * m)` — every cell may be visited.
 Space Complexity: `O(1)` — no extra space used.
 
+**Walkthrough:** On `matrix = [[1,3,5,7],[10,11,16,20],[23,30,34,60]]`, `target = 3`: the scan visits row 0 (`1` no match, `3` — match!) and returns `true` immediately, matching the expected output.
+
+---
+
 **Optimized Approach:**
 Since the whole matrix behaves like one sorted 1D array of size `n * m`, apply standard binary search on the virtual index range `[0, n*m - 1]`. Convert a virtual index `idx` back to matrix coordinates using `row = idx / cols` and `col = idx % cols`.
+
+**Logic (Steps):**
+1. Set `low = 0` and `high = rows * cols - 1` to represent the virtual flattened index range.
+2. While `low <= high`, compute `mid = low + (high - low) / 2`.
+3. Convert `mid` to matrix coordinates: `row = mid / cols`, `col = mid % cols`, then read `midValue = matrix[row, col]`.
+4. If `midValue == target`, return `true`.
+5. If `midValue < target`, discard the left half (`low = mid + 1`); otherwise discard the right half (`high = mid - 1`).
+6. If the loop ends without finding the target, return `false`.
 
 ```csharp
 public bool SearchMatrixIOptimized(int[,] matrix, int target)
@@ -281,8 +330,11 @@ public bool SearchMatrixIOptimized(int[,] matrix, int target)
 Time Complexity: `O(log(n * m))` — a single binary search over `n * m` virtual elements.
 Space Complexity: `O(1)` — only a constant number of extra variables are used.
 
-**Explanation:**
-Because each row's first element is strictly greater than the previous row's last element, and each row itself is sorted, reading the matrix row by row (left to right, top to bottom) produces one continuously increasing sequence. Any virtual index `idx` in `[0, n*m - 1]` maps uniquely to `matrix[idx / cols, idx % cols]` — dividing by the number of columns gives which row `idx` falls into, and the remainder gives the position within that row. Standard binary search is then applied directly on this virtual index range exactly as it would be on a plain 1D sorted array, giving `O(log(n*m))` time without ever materializing a flattened array.
+**Walkthrough:** On `matrix = [[1,3,5,7],[10,11,16,20],[23,30,34,60]]`, `target = 3` (`rows=3, cols=4`, flattened `[1,3,5,7,10,11,16,20,23,30,34,60]`):
+- `low=0, high=11`, `mid=5` → `row=1,col=1` → `matrix[1,1]=11`. `11>3`, so `high=4`.
+- `low=0, high=4`, `mid=2` → `row=0,col=2` → `matrix[0,2]=5`. `5>3`, so `high=1`.
+- `low=0, high=1`, `mid=0` → `row=0,col=0` → `matrix[0,0]=1`. `1<3`, so `low=1`.
+- `low=1, high=1`, `mid=1` → `row=0,col=1` → `matrix[0,1]=3`. `3==3` → return `true`, matching the expected output.
 
 ---
 
@@ -305,6 +357,12 @@ A peak element in a 2D matrix is an element that is strictly greater than all of
 
 **Brute Force Approach:**
 For every cell, compare it against its up/down/left/right neighbors (treating out-of-bounds as `-infinity`) and return the first cell for which all existing neighbors are smaller.
+
+**Logic (Steps):**
+1. Iterate every cell `(i, j)` in row-major order.
+2. Compute `up`, `down`, `left`, `right` neighbor values, using `int.MinValue` when the neighbor is out of bounds.
+3. If `matrix[i,j]` is strictly greater than all four neighbor values, return `(i, j)` immediately.
+4. If no cell satisfies this after scanning the whole matrix, return `(-1, -1)` (unreachable given a peak is guaranteed).
 
 ```csharp
 public (int row, int col) FindPeakGridBrute(int[,] matrix)
@@ -337,8 +395,20 @@ public (int row, int col) FindPeakGridBrute(int[,] matrix)
 Time Complexity: `O(n * m)` — every cell may be checked against its neighbors.
 Space Complexity: `O(1)` — no extra space used.
 
+**Walkthrough:** On `matrix = [[10,20,15],[21,30,14],[7,16,32]]`: cell `(0,0)=10` has `right=20 > 10`, fails. `(0,1)=20` has `right=15`,`left=10`,`down=30 > 20`, fails. `(0,2)=15` fails (`down=14`? `14<15`, but `left=20>15`, fails). `(1,0)=21` has `up=10, down=7, right=30>21`, fails. `(1,1)=30` has `up=20, down=16, left=21, right=14` — all smaller than `30` → returns `(1,1)`, matching the expected output (value `30`).
+
+---
+
 **Optimized Approach:**
 Binary search on columns. For a chosen middle column `mid`, find the row index of the maximum element in that column (`O(n)` scan). Compare that maximum element with its left neighbor (`mid - 1` column, same row) and right neighbor (`mid + 1` column, same row). If it is greater than both, it is a 2D peak. If the left neighbor is greater, a peak must exist in the left half of columns, so search `low = mid`'s left side (`high = mid - 1`). Otherwise a peak must exist in the right half, so search `low = mid + 1`. This halves the column search space each time, and each step does an `O(n)` column-max scan.
+
+**Logic (Steps):**
+1. Set `low = 0`, `high = cols - 1` to binary search over columns.
+2. While `low <= high`, pick `midCol = low + (high - low) / 2` and scan that column top-to-bottom to find `maxRowIndex`/`maxValueInCol`.
+3. Read the left neighbor (`midCol - 1`, same row) and right neighbor (`midCol + 1`, same row), using `int.MinValue` at the boundary.
+4. If `maxValueInCol` beats both neighbors, it's a 2D peak — return `(maxRowIndex, midCol)`.
+5. If the left neighbor is bigger, a peak must lie in the left half, so set `high = midCol - 1`; otherwise set `low = midCol + 1` to search the right half.
+6. If the loop ends without returning, return `(-1, -1)` (unreachable given a peak is guaranteed).
 
 ```csharp
 public (int row, int col) FindPeakGridOptimized(int[,] matrix)
@@ -388,8 +458,8 @@ public (int row, int col) FindPeakGridOptimized(int[,] matrix)
 Time Complexity: `O(n * log m)` — binary search over `m` columns (`log m` steps), and each step scans a column of `n` rows to find its maximum.
 Space Complexity: `O(1)` — only a constant number of extra variables are used.
 
-**Explanation:**
-The correctness relies on the same "always move toward the larger side" idea as the 1D peak-finding binary search. At column `midCol`, we find the row with the maximum value in that column; this element is already greater than its up/down neighbors by construction (it's the column max). We only need to check its left and right neighbors. If it beats both, it's a full 2D peak. If the left neighbor is larger, then moving further left the values only need to keep increasing or a peak will be found strictly to the left of `midCol` — because the left neighbor is bigger than the current column's maximum, so it is definitely bigger than everything else in the current column too, guaranteeing a peak exists somewhere in the left half. Symmetric logic applies to the right side. This guarantees discarding half the columns at each step, giving `O(log m)` column-search steps, each costing `O(n)` to find a column maximum, for `O(n log m)` overall.
+**Walkthrough:** On `matrix = [[10,20,15],[21,30,14],[7,16,32]]` (`cols=3`):
+- `low=0, high=2`, `midCol=1`. Column 1 is `[20,30,16]` → max `30` at `maxRowIndex=1`. Left neighbor `matrix[1,0]=21`, right neighbor `matrix[1,2]=14`. `30 > 21` and `30 > 14` → return `(1, 1)`, matching the expected output (value `30`).
 
 ---
 
@@ -412,6 +482,12 @@ Given an `n x m` matrix where every row is individually sorted in non-decreasing
 
 **Brute Force Approach:**
 Copy all `n * m` elements of the matrix into a single array, sort that array, and pick the middle element.
+
+**Logic (Steps):**
+1. Allocate an array `allElements` of size `rows * cols`.
+2. Copy every matrix cell into `allElements` in row-major order.
+3. Sort `allElements` in ascending order.
+4. Return the element at index `(rows * cols) / 2` (the middle element, since the total count is odd).
 
 ```csharp
 public int MedianOfMatrixBrute(int[,] matrix)
@@ -440,8 +516,19 @@ public int MedianOfMatrixBrute(int[,] matrix)
 Time Complexity: `O(n * m * log(n * m))` — dominated by sorting all elements.
 Space Complexity: `O(n * m)` — extra array to hold and sort all elements.
 
+**Walkthrough:** On `matrix = [[1,3,5],[2,6,9],[3,6,9]]`: flattening gives `[1,3,5,2,6,9,3,6,9]`; sorting gives `[1,2,3,3,5,6,6,9,9]` (9 elements). The middle index is `9/2 = 4` (0-indexed), and `allElements[4] = 5`, matching the expected output `5`.
+
+---
+
 **Optimized Approach:**
 Binary search on the value range `[minElement, maxElement]` of the matrix. For a candidate value `mid`, count how many elements in the entire matrix are `<= mid` by binary searching (upper bound) within each row and summing the counts — this works because each row is individually sorted. If that count is less than or equal to `(n*m)/2`, the median must be greater than `mid`, so search the right half. Otherwise, the median could be `mid` or something smaller, so search the left half (record `mid` as a candidate answer). The smallest value for which the count of elements `<= mid` exceeds `(n*m)/2` is the median.
+
+**Logic (Steps):**
+1. Compute `desiredRank = (rows * cols) / 2`, the 0-indexed target rank of the median.
+2. Find `low` as the minimum of each row's first element and `high` as the maximum of each row's last element (valid since rows are sorted).
+3. While `low < high`, compute `mid = low + (high - low) / 2` and call `CountElementsLessEqual` to count how many matrix elements are `<= mid` (via an upper-bound binary search within each row).
+4. If that count is `<= desiredRank`, the median must be larger, so set `low = mid + 1`; otherwise `mid` is a valid candidate, so set `high = mid`.
+5. When `low == high`, return `low` as the median.
 
 ```csharp
 public int MedianOfMatrixOptimized(int[,] matrix)
@@ -515,12 +602,11 @@ private int CountElementsLessEqual(int[,] matrix, int value, int rows, int cols)
 Time Complexity: `O(n * log m * log(maxValue - minValue))` — the outer binary search on the value range runs `log(maxValue - minValue)` times, and each iteration counts elements `<= mid` by binary searching each of the `n` rows in `O(log m)`.
 Space Complexity: `O(1)` — no extra array is used, only a constant number of variables.
 
-**Explanation:**
-Dry run the value-range binary search on `matrix = [[1,3,5],[2,6,9],[3,6,9]]` (`rows = 3, cols = 3, total = 9, desiredRank = 9/2 = 4`):
+**Walkthrough:** Dry run the value-range binary search on `matrix = [[1,3,5],[2,6,9],[3,6,9]]` (`rows = 3, cols = 3, total = 9, desiredRank = 9/2 = 4`):
 - `low = min(1,2,3) = 1`, `high = max(5,9,9) = 9`.
 - Iteration 1: `mid = 5`. Count of elements `<= 5`: row0 → `1,3,5` → 3; row1 → `2` → 1; row2 → `3` → 1. Total = `5`. Since `5 > desiredRank(4)`, set `high = mid = 5`.
 - Iteration 2: `low=1, high=5`, `mid = 3`. Count `<= 3`: row0 → `1,3` → 2; row1 → `2` → 1; row2 → `3` → 1. Total = `4`. Since `4 <= desiredRank(4)`, set `low = mid + 1 = 4`.
 - Iteration 3: `low=4, high=5`, `mid = 4`. Count `<= 4`: row0 → `1,3` → 2; row1 → `2` → 1; row2 → `3` → 1. Total = `4`. Since `4 <= 4`, set `low = 5`.
 - Now `low == high == 5`, loop ends. Return `5`, matching the expected median.
 
-This works because for a fully sorted array of `n*m` (odd) elements, the median is the element at 0-indexed position `desiredRank = (n*m)/2` — i.e., the smallest value `v` such that at least `desiredRank + 1` elements of the array are `<= v`. Counting "elements `<= mid`" across the matrix is a monotonic, non-decreasing function of `mid` (as `mid` increases, the count can only stay the same or grow), which is exactly the precondition needed for binary search on answer: if the count is `<= desiredRank`, `mid` is too small to be the median (there aren't enough elements at or below it yet), so we move `low` up; otherwise `mid` is large enough to be a valid candidate (possibly the tightest one), so we pull `high` down to `mid` instead of `mid - 1`, ensuring we never skip past the true smallest qualifying value. When `low` converges with `high`, that value is guaranteed to be present in the matrix and is the median, because the counting function's "crossing point" from `<= desiredRank` to `> desiredRank` occurs precisely at the median's value in an odd-sized dataset.
+---

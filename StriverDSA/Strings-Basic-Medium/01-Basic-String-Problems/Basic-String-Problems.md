@@ -11,6 +11,12 @@
 
 **Brute Force Approach:** Split the string into primitive substrings by tracking balance with a counter — whenever the running open/close count returns to zero, that marks the end of one primitive substring. Collect each primitive substring, strip its first and last character, and append the remainder to the result using a `List<char>` or `StringBuilder`.
 
+**Logic (Steps):**
+1. Scan `s` left to right, incrementing `balance` on `'('` and decrementing on `')'`.
+2. Whenever `balance` returns to `0`, the substring from `start` to `i` is one complete primitive; add it to `primitives` and set `start = i + 1`.
+3. After collecting all primitives, iterate over each one and append `primitive.Substring(1, primitive.Length - 2)` (stripping its outermost pair) to the result.
+4. Return the concatenated result.
+
 ```csharp
 public static string RemoveOuterParentheses(string s)
 {
@@ -45,7 +51,17 @@ public static string RemoveOuterParentheses(string s)
 Time Complexity: O(n) for the split pass plus O(n) for building the result — overall O(n), but with extra overhead from creating substrings.
 Space Complexity: O(n) for the `List<string>` of primitives plus O(n) for the result `StringBuilder`.
 
+**Walkthrough:** For `s = "(()())(())"`: scanning left to right, `balance` goes `1,2,1,2,1,0` — at index 5 it hits `0`, so `primitives = ["(()())"]`, `start = 6`. Continuing, `balance` goes `1,2,1,0` — at index 9 it hits `0` again, so `primitives = ["(()())", "(())"]`. Stripping outer parens from each gives `"()()"` and `"()"`, concatenated to `"()()()"`, matching the expected Output.
+
+---
+
 **Optimized Approach:** Use a single depth counter while scanning the string once. For each `(`, only append it to the result if the current depth is greater than 0 (i.e., it is not an outermost opening bracket), then increment depth. For each `)`, decrement depth first, then only append it if depth is still greater than 0 (i.e., it is not an outermost closing bracket). This avoids any substring extraction or extra list.
+
+**Logic (Steps):**
+1. Initialize `depth = 0` and an empty `result` StringBuilder.
+2. For each `'('` in `s`: append it to `result` only if `depth > 0` (skips the outermost opens), then increment `depth`.
+3. For each `')'` in `s`: decrement `depth` first, then append it to `result` only if `depth > 0` (skips the outermost closes).
+4. Return `result` after the full scan.
 
 ```csharp
 public static string RemoveOuterParenthesesOptimized(string s)
@@ -75,22 +91,7 @@ public static string RemoveOuterParenthesesOptimized(string s)
 Time Complexity: O(n) — single pass over the string with O(1) work per character.
 Space Complexity: O(n) for the output `StringBuilder` (excluding the output, extra space is O(1) since only a depth counter is used).
 
-**Explanation:** Dry run of the depth-counter trick on `s = "(()())(())"`:
-
-| char | action | depth before | depth after | appended? |
-|------|--------|--------------|--------------|-----------|
-| `(`  | outer open | 0 | 1 | no (depth was 0) |
-| `(`  | inner open | 1 | 2 | yes → `(` |
-| `)`  | inner close | 2 | 1 | yes → `)` |
-| `(`  | inner open | 1 | 2 | yes → `(` |
-| `)`  | inner close | 2 | 1 | yes → `)` |
-| `)`  | outer close | 1 | 0 | no (depth becomes 0) |
-| `(`  | outer open | 0 | 1 | no |
-| `(`  | inner open | 1 | 2 | yes → `(` |
-| `)`  | inner close | 2 | 1 | yes → `)` |
-| `)`  | outer close | 1 | 0 | no |
-
-Appended characters in order: `( ) ( ) ( )` → result = `"()()()"`, matching the expected output.
+**Walkthrough:** Tracing `s = "(()())(())"` char by char with the depth counter: `(` at depth 0 → not appended, `depth=1`; `(` at depth 1 → appended `(`, `depth=2`; `)` → `depth=1`, appended `)`; `(` at depth 1 → appended `(`, `depth=2`; `)` → `depth=1`, appended `)`; `)` → `depth=0`, not appended; `(` at depth 0 → not appended, `depth=1`; `(` at depth 1 → appended `(`, `depth=2`; `)` → `depth=1`, appended `)`; `)` → `depth=0`, not appended. Appended characters in order: `( ) ( ) ( )` → result `"()()()"`, matching the expected Output.
 
 ---
 
@@ -104,6 +105,12 @@ Appended characters in order: `( ) ( ) ( )` → result = `"()()()"`, matching th
 - Explanation: The words `["the", "sky", "is", "blue"]` are reversed to `["blue", "is", "sky", "the"]`, joined with single spaces, and all extra whitespace is discarded.
 
 **Brute Force Approach:** Split the string on whitespace (using an overload that discards empty entries), then push each word onto a stack (or simply iterate the resulting array from the end), and join them with single spaces using a `List<string>` / `StringBuilder`.
+
+**Logic (Steps):**
+1. Split `s` on `' '` with `StringSplitOptions.RemoveEmptyEntries` to get a clean `words` array.
+2. Iterate `words` from the last index down to `0`, adding each word to a `collected` list.
+3. Join `collected` with single spaces using `string.Join(" ", collected)`.
+4. Return the joined result.
 
 ```csharp
 public static string ReverseWords(string s)
@@ -122,7 +129,18 @@ public static string ReverseWords(string s)
 Time Complexity: O(n), where n is the length of the string — splitting and rejoining each take linear time.
 Space Complexity: O(n) for the array of words and the intermediate list.
 
+**Walkthrough:** For `s = "  the sky   is blue "`: `Split(' ', RemoveEmptyEntries)` gives `words = ["the","sky","is","blue"]`. Iterating from index 3 down to 0: `collected = ["blue","is","sky","the"]`. Joining with spaces gives `"blue is sky the"`, matching the expected Output.
+
+---
+
 **Optimized Approach:** Do it in a single pass without relying on `Split`: scan the string from right to left, collecting characters of the current word into a `StringBuilder` buffer; whenever a space boundary is hit and the buffer is non-empty, append the buffer (plus a separating space) to the result, then clear the buffer. This mimics an in-place "split and reverse" without building an intermediate array of words.
+
+**Logic (Steps):**
+1. Start `i` at `s.Length - 1` and scan backward.
+2. Skip any run of spaces by decrementing `i` while `s[i] == ' '`; if `i < 0`, stop entirely.
+3. Collect the current word by scanning backward while `s[i] != ' '`, inserting each character at the front of a `word` buffer (`word.Insert(0, s[i])`).
+4. Append a separating space to `result` if it already has content, then append `word`.
+5. Repeat from step 2 until `i < 0`, then return `result`.
 
 ```csharp
 public static string ReverseWordsOptimized(string s)
@@ -159,7 +177,7 @@ public static string ReverseWordsOptimized(string s)
 Time Complexity: O(n) — every character is visited a constant number of times (once to skip/scan, once to insert into the word buffer), no library split overhead.
 Space Complexity: O(n) for the result and temporary word buffer; no auxiliary array of words is created.
 
-**Explanation:** For `s = "  the sky   is blue "`, scanning from the right: skip the trailing space, read `"blue"`, append to result → `"blue"`. Skip spaces, read `"is"` → result `"blue is"`. Skip spaces, read `"sky"` → result `"blue is sky"`. Skip spaces, read `"the"` → result `"blue is sky the"`. Skip leading spaces, `i` becomes negative, loop ends. Final output: `"blue is sky the"`.
+**Walkthrough:** For `s = "  the sky   is blue "`, scanning from the right: skip the trailing space, read `"blue"`, append to result → `"blue"`. Skip spaces, read `"is"` → result `"blue is"`. Skip spaces, read `"sky"` → result `"blue is sky"`. Skip spaces, read `"the"` → result `"blue is sky the"`. Skip leading spaces, `i` becomes negative, loop ends. Final output `"blue is sky the"`, matching the expected Output.
 
 ---
 
@@ -179,6 +197,12 @@ Second example:
 
 **Brute Force Approach:** Try every prefix length from the full string down to length 1, convert the last character of each candidate prefix to check parity, and return the first (longest) prefix whose last digit is odd. This can be done by building substrings explicitly.
 
+**Logic (Steps):**
+1. Loop `length` from `num.Length` down to `1`.
+2. For each `length`, build `candidate = num.Substring(0, length)` and read its last digit.
+3. If the last digit is odd (`lastDigit % 2 != 0`), return `candidate` immediately.
+4. If no length yields an odd last digit, return `""`.
+
 ```csharp
 public static string LargestOddNumber(string num)
 {
@@ -197,7 +221,17 @@ public static string LargestOddNumber(string num)
 Time Complexity: O(n^2) in the worst case, since `Substring` creates a new string of up to length n for each of up to n iterations.
 Space Complexity: O(n) for the candidate substring created in each iteration (not counting the returned result).
 
+**Walkthrough:** For `num = "1234"`: `length=4`, candidate `"1234"`, last digit `4`, even, continue. `length=3`, candidate `"123"`, last digit `3`, odd → return `"123"`, matching the expected Output.
+
+---
+
 **Optimized Approach:** Scan the string once from the last character toward the front, checking parity directly on the character without building any substring. Stop at the first (rightmost) odd digit found and return `num.Substring(0, i + 1)` — only one substring is ever created, for the final answer.
+
+**Logic (Steps):**
+1. Loop `i` from `num.Length - 1` down to `0`.
+2. At each `i`, compute `digit = num[i] - '0'`.
+3. If `digit` is odd, return `num.Substring(0, i + 1)` immediately.
+4. If no odd digit is found through the whole scan, return `""`.
 
 ```csharp
 public static string LargestOddNumberOptimized(string num)
@@ -216,7 +250,7 @@ public static string LargestOddNumberOptimized(string num)
 Time Complexity: O(n) — a single backward scan; only one `Substring` call is made (for the final result), not one per iteration.
 Space Complexity: O(1) auxiliary space (excluding the single output substring), since no intermediate candidates are built.
 
-**Explanation:** Brief dry run for `num = "1234"`: start at index 3 (`'4'`), even, skip. Index 2 (`'3'`), odd — stop here and return `num.Substring(0, 3)` = `"123"`, matching the expected output.
+**Walkthrough:** For `num = "1234"`: start at index 3 (`'4'`), even, skip. Index 2 (`'3'`), odd — stop here and return `num.Substring(0, 3)` = `"123"`, matching the expected Output.
 
 ---
 
@@ -230,6 +264,13 @@ Space Complexity: O(1) auxiliary space (excluding the single output substring), 
 - Explanation: `"fl"` is the longest string that is a prefix of all three input strings; `"flo"` fails because `"flight"` doesn't start with it.
 
 **Brute Force Approach:** Take the first string as a candidate prefix. For each candidate length from the full length of the first string down to 0, check (using nested loops / an extra `List<char>`) whether every other string in the array starts with that candidate prefix; return the first one that works.
+
+**Logic (Steps):**
+1. Handle the empty/null array edge case by returning `""`.
+2. Loop `length` from `first.Length` down to `1`, forming `candidate = first.Substring(0, length)`.
+3. For each candidate, check every other string in `strs` with `StartsWith(candidate)`; if any fails, break and try a shorter length.
+4. Return the first candidate that all strings share.
+5. If no candidate length works, return `""`.
 
 ```csharp
 public static string LongestCommonPrefix(string[] strs)
@@ -263,7 +304,17 @@ public static string LongestCommonPrefix(string[] strs)
 Time Complexity: O(m^2 * n) in the worst case, where m is the length of the first string and n is the number of strings — for each of the m candidate lengths, up to n strings are checked with an O(m) `StartsWith`/substring comparison.
 Space Complexity: O(m) for each candidate substring created.
 
+**Walkthrough:** For `strs = ["flower", "flow", "flight"]`: `length=6`, candidate `"flower"`, `"flow"` doesn't start with it → fail. `length=5`, `"flowe"`, fails. `length=4`, `"flow"`, `"flight"` doesn't start with it → fail. `length=3`, `"flo"`, `"flight"` doesn't start with it → fail. `length=2`, `"fl"`, both `"flow"` and `"flight"` start with `"fl"` → return `"fl"`, matching the expected Output.
+
+---
+
 **Optimized Approach:** Compare characters column by column across all strings simultaneously. For each character position `i` starting at 0, take `strs[0][i]` as the reference character and check that every other string has the same character at position `i` (and is long enough). Stop at the first mismatch or when the shortest string is exhausted, and return the prefix built up to that point.
+
+**Logic (Steps):**
+1. Handle the empty/null array edge case by returning `""`.
+2. Loop `i` from `0` to `strs[0].Length - 1`, taking `c = strs[0][i]` as the reference character for this column.
+3. For each other string `strs[j]`, check if `i == strs[j].Length` (too short) or `strs[j][i] != c` (mismatch); if either holds, return `strs[0].Substring(0, i)`.
+4. If the loop completes without any mismatch, the entire first string is the common prefix, so return `strs[0]`.
 
 ```csharp
 public static string LongestCommonPrefixOptimized(string[] strs)
@@ -290,7 +341,7 @@ public static string LongestCommonPrefixOptimized(string[] strs)
 Time Complexity: O(m * n), where m is the length of the shortest common prefix (bounded by the shortest string) and n is the number of strings — each character position is checked across all strings exactly once, with early exit on mismatch. This avoids the repeated re-scanning of the brute force approach.
 Space Complexity: O(1) auxiliary space (excluding the single output substring), since comparisons are done character-by-character in place.
 
-**Explanation:** Brief walk-through for `strs = ["flower", "flow", "flight"]`: at `i = 0`, `'f'` matches in all three. At `i = 1`, `'l'` matches. At `i = 2`, reference is `'o'` from `"flower"`, but `"flight"` has `'i'` at index 2 — mismatch, so return `strs[0].Substring(0, 2)` = `"fl"`.
+**Walkthrough:** For `strs = ["flower", "flow", "flight"]`: at `i = 0`, `'f'` matches in all three. At `i = 1`, `'l'` matches. At `i = 2`, reference is `'o'` from `"flower"`, but `"flight"` has `'i'` at index 2 — mismatch, so return `strs[0].Substring(0, 2)` = `"fl"`, matching the expected Output.
 
 ---
 
@@ -309,6 +360,13 @@ Second example:
 - Explanation: `'o'` would need to map to both `'o'` and `'a'`, which is not consistent.
 
 **Brute Force Approach:** Use two `Dictionary<char, char>` objects (one for `s -> t` and one for `t -> s`) to track mappings as extra data structures, checking both directions at every index to ensure the mapping is consistent and one-to-one.
+
+**Logic (Steps):**
+1. If lengths differ, return `false` immediately.
+2. Maintain `mapST` (s-character to t-character) and `mapTS` (t-character to s-character).
+3. At each index `i`, if `mapST` already has `s[i]`, verify it maps to `t[i]`; otherwise record the mapping.
+4. Symmetrically check/record `mapTS[t[i]] == s[i]`.
+5. If any check fails at any index, return `false`; if the loop completes, return `true`.
 
 ```csharp
 public static bool IsIsomorphic(string s, string t)
@@ -351,7 +409,18 @@ public static bool IsIsomorphic(string s, string t)
 Time Complexity: O(n), where n is the length of the strings — one pass with O(1) dictionary lookups.
 Space Complexity: O(k), where k is the number of distinct characters (bounded by the character set size, e.g. 256 for extended ASCII), for the two dictionaries.
 
+**Walkthrough:** For `s = "egg"`, `t = "add"`: `i=0`, `mapST` and `mapTS` empty, record `mapST['e']='a'`, `mapTS['a']='e'`. `i=1`, `s[1]='g'` not in `mapST`, record `mapST['g']='d'`, `mapTS['d']='g'`. `i=2`, `s[2]='g'` already maps to `'d'`, matches `t[2]='d'` — ok; `mapTS['d']` already `'g'`, matches `s[2]='g'` — ok. Loop completes, return `true`, matching the expected Output.
+
+---
+
 **Optimized Approach:** Replace the two dictionaries with two fixed-size integer arrays of size 256 (for ASCII characters), storing the "last seen position + 1" of each character in `s` and `t`. At each index, compare whether the last-seen position of `s[i]` in `s` matches the last-seen position of `t[i]` in `t`; if they differ, the mapping is inconsistent. This avoids hashing overhead and uses simple array indexing.
+
+**Logic (Steps):**
+1. If lengths differ, return `false`.
+2. Allocate `lastSeenS[256]` and `lastSeenT[256]`, both initialized to `0`.
+3. At each index `i`, compare `lastSeenS[s[i]]` with `lastSeenT[t[i]]`; if they differ, return `false`.
+4. Update both `lastSeenS[s[i]] = i + 1` and `lastSeenT[t[i]] = i + 1`.
+5. If the loop completes, return `true`.
 
 ```csharp
 public static bool IsIsomorphicOptimized(string s, string t)
@@ -380,7 +449,7 @@ public static bool IsIsomorphicOptimized(string s, string t)
 Time Complexity: O(n) — single pass, O(1) array access per character (no hashing).
 Space Complexity: O(1) — the two arrays have a fixed size of 256 regardless of input length.
 
-**Explanation:** Brief reasoning: storing "last seen index + 1" (0 means "never seen") lets one comparison check both that the current mapping matches an existing one and that no other character already maps to the target — if `s[i]` and `t[i]` were last seen at different points, the mapping is broken. For `s = "egg"`, `t = "add"`: at `i=0`, both unseen (0 == 0), record position 1 for `'e'` and `'a'`. At `i=1`, `'g'` and `'d'` both unseen (0 == 0), record position 2. At `i=2`, `'g'` was last seen at position 2, `'d'` was last seen at position 2 — match, update to position 3. All checks pass → `true`.
+**Walkthrough:** Storing "last seen index + 1" (0 means "never seen") lets one comparison check both that the current mapping matches an existing one and that no other character already maps to the target. For `s = "egg"`, `t = "add"`: at `i=0`, both unseen (0 == 0), record position 1 for `'e'` and `'a'`. At `i=1`, `'g'` and `'d'` both unseen (0 == 0), record position 2. At `i=2`, `'g'` was last seen at position 2, `'d'` was last seen at position 2 — match, update to position 3. All checks pass, returning `true`, matching the expected Output.
 
 ---
 
@@ -394,6 +463,12 @@ Space Complexity: O(1) — the two arrays have a fixed size of 256 regardless of
 - Explanation: Rotating `s1` by moving the prefix `"wat"` to the end gives `"erbottlewat"`, which equals `s2`.
 
 **Brute Force Approach:** Try every possible rotation point explicitly: for each index `i` from 0 to `s1.Length - 1`, build the rotated string by concatenating `s1.Substring(i)` and `s1.Substring(0, i)` using a `StringBuilder`, and compare it against `s2`.
+
+**Logic (Steps):**
+1. If lengths differ (or both empty), handle the edge case by direct comparison.
+2. Loop `i` from `0` to `s1.Length - 1`, forming `rotated = s1.Substring(i) + s1.Substring(0, i)` (the string cyclically shifted by `i`).
+3. Compare `rotated` against `s2`; if equal, return `true` immediately.
+4. If no rotation point matches, return `false`.
 
 ```csharp
 public static bool IsRotation(string s1, string s2)
@@ -419,7 +494,16 @@ public static bool IsRotation(string s1, string s2)
 Time Complexity: O(n^2) — for each of the n possible rotation points, building the rotated string and comparing it takes O(n).
 Space Complexity: O(n) for the `StringBuilder` rotated string built on each iteration.
 
+**Walkthrough:** For `s1 = "waterbottle"`, `s2 = "erbottlewat"`: at `i=0`, rotated = `"waterbottle"`, not equal to `s2`. At `i=1`, rotated = `"aterbottlew"`, not equal. ... At `i=3`, rotated = `s1.Substring(3) + s1.Substring(0,3) = "erbottle" + "wat" = "erbottlewat"`, which equals `s2` → return `true`, matching the expected Output.
+
+---
+
 **Optimized Approach:** Use the classic concatenation trick: if `s2` is a rotation of `s1`, then `s2` must appear as a contiguous substring of `s1 + s1`. This is because concatenating `s1` with itself lays out every possible rotation as a substring. So simply check length equality first, then check if `(s1 + s1).Contains(s2)`.
+
+**Logic (Steps):**
+1. If lengths differ, return `false`.
+2. Build `doubled = s1 + s1`.
+3. Return `doubled.Contains(s2)` — a true rotation must appear as a contiguous substring of the doubled string.
 
 ```csharp
 public static bool IsRotationOptimized(string s1, string s2)
@@ -434,9 +518,7 @@ public static bool IsRotationOptimized(string s1, string s2)
 Time Complexity: O(n) on average, where n is the length of the strings — building `s1 + s1` is O(n), and `Contains` (using an efficient substring search) runs in O(n) on average (O(n^2) worst case with a naive search, but .NET's implementation performs well in practice).
 Space Complexity: O(n) for the doubled string `s1 + s1`.
 
-**Explanation:** Dry run of the `(s1 + s1).Contains(s2)` trick on `s1 = "waterbottle"`, `s2 = "erbottlewat"`:
-`doubled = "waterbottle" + "waterbottle" = "waterbottlewaterbottle"`.
-Scanning for `"erbottlewat"` inside `doubled`: starting at index 2 of `doubled` (`"erbottlewaterbottle"`), the substring `"erbottlewat"` (11 characters) matches exactly — `doubled.Substring(2, 11) == "erbottlewat"`. Since the substring is found, `Contains` returns `true`, confirming `s2` is a rotation of `s1`.
+**Walkthrough:** For `s1 = "waterbottle"`, `s2 = "erbottlewat"`: `doubled = "waterbottle" + "waterbottle" = "waterbottlewaterbottle"`. Scanning for `"erbottlewat"` inside `doubled`, it is found starting at index 2 (`doubled.Substring(2, 11) == "erbottlewat"`). `Contains` returns `true`, matching the expected Output.
 
 ---
 
@@ -455,6 +537,13 @@ Second example:
 - Explanation: `"rat"` contains `'t'` but `"car"` does not, so the character frequencies differ.
 
 **Brute Force Approach:** Convert both strings into `char[]` arrays, sort each array, and compare the sorted arrays (or the resulting strings) for equality. If they match exactly, the strings are anagrams.
+
+**Logic (Steps):**
+1. If lengths differ, return `false`.
+2. Convert `s` and `t` into `char[]` arrays via `ToCharArray()`.
+3. Sort both arrays with `Array.Sort`.
+4. Compare the sorted arrays element by element; if any position differs, return `false`.
+5. If all positions match, return `true`.
 
 ```csharp
 public static bool IsAnagram(string s, string t)
@@ -482,7 +571,18 @@ public static bool IsAnagram(string s, string t)
 Time Complexity: O(n log n), dominated by sorting both character arrays.
 Space Complexity: O(n) for the two character arrays created by `ToCharArray()`.
 
+**Walkthrough:** For `s = "anagram"`, `t = "nagaram"`: sorting both gives `sChars = "aaagmnr"` and `tChars = "aaagmnr"` (both sorted to the same sequence). Comparing index by index, every character matches, so the loop completes and returns `true`, matching the expected Output.
+
+---
+
 **Optimized Approach:** Use a fixed-size frequency array of size 26 (for lowercase English letters) instead of sorting. Increment counts for characters in `s` and decrement counts for characters in `t` in a single combined pass, then verify every count is zero. This avoids sorting entirely.
+
+**Logic (Steps):**
+1. If lengths differ, return `false`.
+2. Allocate `frequency[26]`, all zeros.
+3. In one pass over index `i`, increment `frequency[s[i]-'a']` and decrement `frequency[t[i]-'a']`.
+4. After the pass, check every bucket in `frequency`; if any is non-zero, return `false`.
+5. If all buckets are zero, return `true`.
 
 ```csharp
 public static bool IsAnagramOptimized(string s, string t)
@@ -512,4 +612,6 @@ public static bool IsAnagramOptimized(string s, string t)
 Time Complexity: O(n) — one pass to accumulate frequencies plus a constant-time pass over the fixed 26-element array, versus O(n log n) for sorting.
 Space Complexity: O(1) — the frequency array has a fixed size of 26 regardless of input length.
 
-**Explanation:** Brief reasoning: for `s = "anagram"`, `t = "nagaram"`, every character increment from `s` is exactly canceled out by a matching decrement from `t` because both strings contain the same letters with the same counts, so all 26 buckets end at 0 and the function returns `true`. For `s = "rat"`, `t = "car"`, the bucket for `'t'` ends at `+1` (incremented by `s`, never decremented by `t`) and the bucket for `'c'` ends at `-1`, so the final check finds a non-zero count and returns `false`.
+**Walkthrough:** For `s = "anagram"`, `t = "nagaram"`, every character increment from `s` is exactly canceled out by a matching decrement from `t` because both strings contain the same letters with the same counts, so all 26 buckets end at 0 and the function returns `true`, matching the expected Output. (For `s = "rat"`, `t = "car"`, the bucket for `'t'` ends at `+1` and the bucket for `'c'` ends at `-1`, so the final check finds a non-zero count and returns `false`.)
+
+---

@@ -70,6 +70,13 @@ Every problem below is a variation of this same skeleton:
 **Approach:**
 At index `i`, we have two choices for `arr[i]`: pick it (add to the current list and recurse on `i+1`) or don't pick it (recurse on `i+1` without adding it). When `i` reaches `arr.Length`, the current list is a complete subsequence — add a copy of it to the result. This is the pure, unmodified pick/not-pick template with no pruning and no target condition, so it explores the full recursion tree.
 
+**Logic (Steps):**
+1. Base case: if `i == arr.Length`, every element has been decided — add a copy of `current` to `result` and return.
+2. Pick branch: append `arr[i]` to `current`, then recurse on `Solve(i + 1, ...)`.
+3. Backtrack: after the pick branch returns, remove the last element from `current` to restore it to its pre-pick state.
+4. Don't-pick branch: recurse on `Solve(i + 1, ...)` again without modifying `current`.
+5. No pruning is applied — every one of the `2^n` leaves is visited and recorded.
+
 ```csharp
 public class PrintAllSubsequences
 {
@@ -102,15 +109,14 @@ public class PrintAllSubsequences
 **Time Complexity:** `O(2^n * n)` — there are `2^n` subsequences (leaves of the recursion tree), and copying each one into the result list costs up to `O(n)`.
 **Space Complexity:** `O(n)` auxiliary recursion stack depth (plus `O(2^n * n)` to store all output subsequences). No pruning is applied here since every subsequence, regardless of content, must be printed.
 
-**Explanation:**
-For `arr = [1, 2]`:
+**Walkthrough:** Trace on a 2-element slice `arr = [1, 2]` of the example array (same logic as the 3-element case):
 - `Solve(0, [], ...)` → pick `1` → `current = [1]` → `Solve(1, ...)`
   - pick `2` → `current = [1,2]` → `Solve(2, ...)` → base case, record `[1,2]`, backtrack → `current = [1]`
   - don't pick `2` → `Solve(2, ...)` → base case, record `[1]`, backtrack → `current = []`
 - back in `Solve(0,...)`, don't pick `1` → `Solve(1, ...)`
   - pick `2` → `current = [2]` → `Solve(2, ...)` → base case, record `[2]`, backtrack → `current = []`
   - don't pick `2` → `Solve(2, ...)` → base case, record `[]`
-- Final result: `[1,2], [1], [2], []` — all `2^2 = 4` subsequences, matching the depth-2 tree with 4 leaves.
+- Final result: `[1,2], [1], [2], []` — all `2^2 = 4` subsequences, matching the depth-2 tree with 4 leaves. Applying the same process on the full `arr = [3, 1, 2]` yields the `2^3 = 8` outputs shown above.
 
 ---
 
@@ -125,6 +131,13 @@ For `arr = [1, 2]`:
 
 **Approach:**
 Same pick/not-pick tree, but we track `currentSum` alongside the current list. At the base case (`i == n`), check if `currentSum == K`; if so, this is a valid answer. To return only **one** answer instead of exploring the whole tree, make the recursive function return a `bool` — as soon as the "pick" branch finds a valid answer, short-circuit and skip exploring the "don't pick" branch (and vice versa up the call chain). This is a classic use of a boolean-returning recursion to prune the search once a solution is found.
+
+**Logic (Steps):**
+1. Base case: if `i == arr.Length`, return `true` if `currentSum == k`, else `false`.
+2. Pick branch: add `arr[i]` to `current`, recurse with `currentSum + arr[i]`; if that call returns `true`, immediately return `true` and leave `current` as the answer (no backtrack).
+3. If the pick branch failed, backtrack by removing `arr[i]` from `current`.
+4. Don't-pick branch: recurse with the same `currentSum`, unchanged `current`; if it returns `true`, return `true`.
+5. If neither branch found a match, return `false` — this propagates the short-circuit all the way up, so no additional branches are explored once one match is found.
 
 ```csharp
 public class OneSubsequenceWithSumK
@@ -166,6 +179,18 @@ public class OneSubsequenceWithSumK
 **Time Complexity:** Worst case `O(2^n)` if no valid subsequence exists (full tree explored), but typically much faster in practice because the search stops immediately once one valid path is found — the boolean short-circuit prunes all remaining branches at every level once `true` propagates up.
 **Space Complexity:** `O(n)` for the recursion stack and the `current` list.
 
+**Walkthrough:** Using `arr = [1, 2, 1], k = 2`:
+- `Solve(0, currentSum=0, current=[])`
+  - Pick `1` → `current=[1]` → `Solve(1, currentSum=1, current=[1])`
+    - Pick `2` → `current=[1,2]` → `Solve(2, currentSum=3, current=[1,2])`
+      - Pick `1` → `current=[1,2,1]` → `Solve(3, currentSum=4, ...)` → base case, `4 != 2` → `false`, backtrack → `current=[1,2]`
+      - Don't pick `1` → `Solve(3, currentSum=3, ...)` → base case, `3 != 2` → `false`
+      - Both branches `false` → returns `false`, backtrack → `current=[1]`
+    - Don't pick `2` → `Solve(2, currentSum=1, current=[1])`
+      - Pick `1` → `current=[1,1]` → `Solve(3, currentSum=2, ...)` → base case, `2 == 2` → **`true`** — stop here, keep `current=[1,1]`
+      - Since pick branch returned `true`, propagate `true` all the way up without exploring any further don't-pick branches.
+- Final `current = [1, 1]`, matching the stated Output.
+
 ---
 
 ## 3. Count All Subsequences with Sum Equal to K
@@ -179,6 +204,13 @@ public class OneSubsequenceWithSumK
 
 **Approach:**
 Same tree again, but instead of collecting the actual subsequence, the recursive function returns an `int` count. At the base case, return `1` if `currentSum == k`, else `0`. The total count for a given index is `(count from picking) + (count from not picking)`. No need to maintain an explicit `current` list here since we only care about the running sum, not the actual elements — this shrinks the state we carry through the recursion.
+
+**Logic (Steps):**
+1. Base case: if `i == arr.Length`, return `1` if `currentSum == k`, else `0`.
+2. Pick branch: compute `pickCount = Solve(i + 1, ..., currentSum + arr[i])` — how many valid subsequences arise from including `arr[i]`.
+3. Don't-pick branch: compute `notPickCount = Solve(i + 1, ..., currentSum)` — how many valid subsequences arise from excluding `arr[i]`.
+4. Combine: return `pickCount + notPickCount`, since the two branches partition all subsequences at this index and are mutually exclusive.
+5. No `current` list or pruning is used — the full tree of `2^n` leaves is always traversed to get an exact count.
 
 ```csharp
 public class CountSubsequencesWithSumK
@@ -209,6 +241,19 @@ public class CountSubsequencesWithSumK
 **Time Complexity:** `O(2^n)` in the worst case — the full recursion tree of depth `n` must be traversed since we need an exact count, not just existence, so no branch can be skipped once we've found one answer. (This can be optimized further with DP/memoization on `(i, currentSum)` if `arr` contains only non-negative integers, since overlapping subproblems arise — but the pure recursive version explores all `2^n` leaves.)
 **Space Complexity:** `O(n)` recursion stack depth; no auxiliary list needed since only a running sum (an `int`) is passed down instead of a growing `List<int>`.
 
+**Walkthrough:** Using `arr = [1, 2, 1], k = 2`:
+- `Solve(0, currentSum=0)`
+  - Pick `1` → `Solve(1, currentSum=1)`
+    - Pick `2` → `Solve(2, currentSum=3)` → Pick `1` → `Solve(3, currentSum=4)` → base, `4!=2` → `0`; Don't pick `1` → `Solve(3, currentSum=3)` → base, `3!=2` → `0` → returns `0+0=0`
+    - Don't pick `2` → `Solve(2, currentSum=1)` → Pick `1` → `Solve(3, currentSum=2)` → base, `2==2` → `1`; Don't pick `1` → `Solve(3, currentSum=1)` → base, `1!=2` → `0` → returns `1+0=1`
+    - `Solve(1, currentSum=1)` returns `0+1=1`
+  - Don't pick `1` → `Solve(1, currentSum=0)`
+    - Pick `2` → `Solve(2, currentSum=2)` → Pick `1` → `Solve(3, currentSum=3)` → `0`; Don't pick `1` → `Solve(3, currentSum=2)` → `1` → returns `0+1=1`
+    - Don't pick `2` → `Solve(2, currentSum=0)` → Pick `1` → `Solve(3, currentSum=1)` → `0`; Don't pick `1` → `Solve(3, currentSum=0)` → `0` → returns `0`
+    - `Solve(1, currentSum=0)` returns `1+0=1`
+  - `Solve(0, currentSum=0)` returns `1+1=2`
+- Final count `2`, matching the stated Output (the subsequences `[2]` and `[1,1]`).
+
 ---
 
 ## 4. Combination Sum I (same element can be reused unlimited times)
@@ -222,6 +267,13 @@ public class CountSubsequencesWithSumK
 
 **Approach:**
 This still uses the pick/not-pick tree, but with **one key twist**: because a number can be reused unlimited times, when we **pick** `candidates[i]`, we recurse again on the **same index `i`** (not `i + 1`) — this allows `candidates[i]` to be picked again in the next recursive call. Only the **don't-pick** branch advances to `i + 1`, permanently moving past this candidate. We also prune: if the running sum ever exceeds `target`, or if `i` reaches the end of the array, we stop that branch — this pruning is essential because without it, the "keep picking the same small number" branch would recurse infinitely (e.g., picking `2` forever).
+
+**Logic (Steps):**
+1. Base case (success): if `target == 0`, the running selection sums exactly to the original target — add a copy of `current` to `result` and return.
+2. Base case (failure/prune): if `i == candidates.Length` or `target < 0`, this branch cannot succeed — return without recording anything.
+3. Pick branch: add `candidates[i]` to `current`, subtract it from `target`, and recurse while **staying at index `i`** — this is what permits unlimited reuse of `candidates[i]`.
+4. Backtrack: after the pick branch returns, remove `candidates[i]` from `current`.
+5. Don't-pick branch: recurse on `i + 1` with the original `target` unchanged — this candidate is never considered again on this path.
 
 ```csharp
 public class CombinationSumI
@@ -262,8 +314,7 @@ public class CombinationSumI
 **Time Complexity:** Exponential, bounded roughly by `O(2^target)` in the worst case (e.g., all candidates equal to `1`), though in practice it's closer to `O(k^(target/min(candidates)))` for `k` candidates, since the "pick" branch can recurse many times at the same index. Pruning via `target < 0` cuts off entire subtrees early — as soon as the running sum overshoots `target`, we stop descending further on that branch instead of continuing to add more (always-positive) candidates.
 **Space Complexity:** `O(target / min(candidates))` for the recursion stack depth (the longest possible chain of "pick" calls before `target` hits 0 or goes negative), plus space for the output.
 
-**Explanation (dry run of the "stay at same index" trick):**
-Using `candidates = [2, 3], target = 5`:
+**Walkthrough:** Dry run of the "stay at same index" trick, using `candidates = [2, 3], target = 5`:
 
 - `Solve(0, target=5, current=[])`
   - **Pick** `2` → `current=[2]` → `Solve(0, target=3, current=[2])` (still index `0`!)
@@ -299,6 +350,13 @@ Final result: `[[2, 3]]`. Notice how staying at index `0` after picking `2` is e
 
 **Approach:**
 Sort the array first. Now use pick/not-pick, but since each element can only be used once, both branches move to `i + 1` (unlike Combination Sum I where the pick branch stayed at `i`). The duplicate-avoidance trick: at each recursion level, when deciding which value to place at the *current* position, we loop through candidates starting at index `start` and skip any candidate equal to the previous one **at the same recursion depth** (`if (i > start && candidates[i] == candidates[i - 1]) continue;`). This ensures that among several equal values, only the *first* one at a given tree depth is used to "start" a new branch — preventing two identical subtrees from being generated. Sorting is essential so duplicates become adjacent and comparable.
+
+**Logic (Steps):**
+1. Sort `candidates` so equal values become adjacent.
+2. Base case: if `target == 0`, record a copy of `current` as a valid combination and return.
+3. Loop `i` from `start` to the end of the array: if `candidates[i] > target`, `break` immediately (sorted order means everything after is even larger — no point continuing).
+4. Duplicate skip: if `i > start && candidates[i] == candidates[i - 1]`, `continue` — only the first occurrence of a value at this depth may start a new branch.
+5. Pick `candidates[i]`, recurse with `Solve(i + 1, target - candidates[i], ...)` (each element used at most once), then backtrack by removing it from `current` before the next loop iteration.
 
 ```csharp
 public class CombinationSumII
@@ -345,22 +403,19 @@ public class CombinationSumII
 **Time Complexity:** `O(2^n)` worst case for exploring combinations (same exponential branching as the base pick/not-pick tree), with an additional `O(n log n)` for the initial sort. The `if (candidates[i] > target) break;` pruning cuts off entire remaining iterations early once sorted candidates exceed the remaining target, and the duplicate-skip check avoids doing redundant work down identical subtrees.
 **Space Complexity:** `O(n)` for recursion depth (at most `n` elements can be picked before target hits 0 or the array ends), plus output storage.
 
-**Explanation (dry run of the duplicate-skipping logic):**
-Using `candidates = [1, 1, 2]` (already sorted), `target = 3`:
+**Walkthrough:** Dry run of the duplicate-skipping logic, using `candidates = [1, 1, 2]` (already sorted), `target = 3`:
 
 - `Solve(start=0, target=3, current=[])`
-  - `i=0`: `candidates[0]=1`. `i > start`? No (`i == start`), so no skip. Pick `1` → `current=[1]` → `Solve(start=1, target=2, current=[1])`
-    - `i=1`: `candidates[1]=1`. `i > start`? No (`i == start == 1`), no skip. Pick `1` → `current=[1,1]` → `Solve(start=2, target=1, current=[1,1])`
-      - `i=2`: `candidates[2]=2 > target(1)` → **break** (pruned, no valid extension)
+  - `i=0`: `candidates[0]=1`, `i==start` so no skip. Pick `1` → `current=[1]` → `Solve(start=1, target=2, current=[1])`
+    - `i=1`: `candidates[1]=1`, `i==start` so no skip. Pick `1` → `current=[1,1]` → `Solve(start=2, target=1, current=[1,1])`
+      - `i=2`: `candidates[2]=2 > target(1)` → **break** (pruned — `[1,1]` sums to only `2`, can't reach `3`)
       - backtrack → `current=[1]`
-    - `i=2`: `candidates[2]=2`. Pick `2` → `current=[1,2]` → `Solve(start=3, target=0, ...)` → `target==0` → **record `[1,2]`**... 
+    - `i=2` (still inside `Solve(start=1,...)`'s loop): `candidates[2]=2`, not equal to `candidates[1]` so no skip. Pick `2` → `current=[1,2]` → `Solve(start=3, target=0, ...)` → `target==0` → **record `[1,2]`**
+    - backtrack → `current=[1]`, loop ends → backtrack → `current=[]`
+  - `i=1`: `candidates[1]=1`, `i > start` (`1>0`) **and** `candidates[1]==candidates[0]` → **skip** (this is exactly the trick — without it we'd redundantly re-explore picking the *second* `1` first, generating `[1,2]` again via a different index path)
+  - `i=2`: `candidates[2]=2`. Pick `2` → `current=[2]` → `Solve(start=3, target=1,...)` → loop doesn't execute, `target!=0`, returns without recording.
 
-    wait — recompute: after picking index1(value1), target was 2; then loop continues to i=2 within the SAME for-loop (this is `Solve(start=1,...)`'s loop, second iteration): `candidates[2]=2`, `2 <= target(2)`, not a duplicate skip since `candidates[2]!=candidates[1]`. Pick `2` → `current=[1,2]` → `Solve(start=3, target=0,...)` → `target==0` → **record `[1,2]`**
-    - backtrack → `current=[1]`, loop ends (i=3 out of bounds) → backtrack → `current=[]`
-  - `i=1`: `candidates[1]=1`. `i > start` (`1 > 0`) **and** `candidates[1] == candidates[0]` (`1 == 1`) → **skip** (this is exactly the trick — without it we'd redundantly explore picking the *second* `1` first, generating `[1,2]` again and other duplicate combinations)
-  - `i=2`: `candidates[2]=2`. Pick `2` → `current=[2]` → `Solve(start=3, target=1,...)` → loop doesn't execute (`start==3==length`), `target!=0`, returns without recording.
-
-Final result: `[[1,1], ...]` wait — target was 3, recheck: `[1,1]` sums to 2, not 3, so it wouldn't be recorded (matches trace above — `[1,1]` branch got pruned at `target=1` with `candidates[2]=2>1`). Actual recorded combination: `[1,2]` (sum 3). This shows how skipping `i=1` at the top level (the second `1`) prevented a duplicate `[1,2]` from being generated a second time via a different index path, while still allowing `1` to appear twice in a combination when reached via the *inner* recursive call (`Solve(start=1,...)` picking its own `i=1`) — the key distinction is that the skip only applies to the **first candidate chosen at a given `start` level**, not to reuse of the value deeper in the same branch.
+Final result: `[[1,2]]` — the only combination summing to `3`. Skipping `i=1` at the top level (the second `1`) prevented a duplicate `[1,2]` from being generated a second time, while `1` was still allowed to combine with `2` once via the *inner* call `Solve(start=1,...)`'s own `i=1` — the skip only forbids a duplicate from **starting** a branch at a given `start` level, not reuse deeper in an already-committed branch.
 
 ---
 
@@ -375,6 +430,12 @@ Final result: `[[1,1], ...]` wait — target was 3, recheck: `[1,1]` sums to 2, 
 
 **Approach:**
 Identical pick/not-pick tree as Problem 1, but instead of storing the actual subsequence at each leaf, we just carry a running `sum` and record that integer at the base case. This is a simplified/lighter version of the pattern since we never need to store or copy a growing list — just a single accumulating value.
+
+**Logic (Steps):**
+1. Base case: if `i == arr.Length`, add `currentSum` to `result` and return — every leaf of the tree contributes one sum.
+2. Pick branch: recurse on `Solve(i + 1, ..., currentSum + arr[i], result)`, including `arr[i]` in the running total.
+3. Don't-pick branch: recurse on `Solve(i + 1, ..., currentSum, result)`, leaving the running total unchanged.
+4. No list/backtracking is needed since `currentSum` is a value type passed by copy on each call — no undo step is required.
 
 ```csharp
 public class SubsetSumI
@@ -406,6 +467,16 @@ public class SubsetSumI
 **Time Complexity:** `O(2^n)` — every one of the `2^n` leaves of the recursion tree contributes exactly one sum to the result, and no pruning is applicable since all subsets (even those with sum `0`) must be reported.
 **Space Complexity:** `O(n)` recursion stack depth, plus `O(2^n)` to store all resulting sums.
 
+**Walkthrough:** Using a 2-element slice `arr = [3, 1]` (subset of the example `[3, 1, 2]`):
+- `Solve(0, currentSum=0)`
+  - Pick `3` → `Solve(1, currentSum=3)`
+    - Pick `1` → `Solve(2, currentSum=4)` → base case, record `4`
+    - Don't pick `1` → `Solve(2, currentSum=3)` → base case, record `3`
+  - Don't pick `3` → `Solve(1, currentSum=0)`
+    - Pick `1` → `Solve(2, currentSum=1)` → base case, record `1`
+    - Don't pick `1` → `Solve(2, currentSum=0)` → base case, record `0`
+- Result for `[3,1]`: `[4, 3, 1, 0]`. Extending the same process to the full `arr = [3, 1, 2]` produces all `2^3 = 8` sums `[6, 4, 5, 3, 3, 1, 2, 0]` shown in the Example.
+
 ---
 
 ## 7. Subset Sum II (return all unique subsets, array may have duplicates)
@@ -419,6 +490,13 @@ public class SubsetSumI
 
 **Approach:**
 Sort the array so duplicates are adjacent. Then, instead of a strict binary pick/not-pick recursion, use the same "explore starting from index `start`" loop style as Combination Sum II: at each recursive call, record the current subset immediately (every node in the tree — not just leaves — is a valid subset), then loop `i` from `start` to the end, skipping any `i > start` where `nums[i] == nums[i-1]` (duplicate at the same depth). This guarantees that among repeated values, only the first occurrence at a given level starts a new distinct subset branch, so we never generate the same subset twice.
+
+**Logic (Steps):**
+1. Sort `nums` so equal values become adjacent.
+2. At the start of every call, immediately record a copy of `current` into `result` — every node of the tree (not just the leaves) is itself a valid subset.
+3. Loop `i` from `start` to the end of the array; if `i > start && nums[i] == nums[i - 1]`, `continue` — only the first occurrence of a value at this depth may start a new branch.
+4. Pick `nums[i]`: add it to `current`, recurse on `Solve(i + 1, ...)` (each element used at most once).
+5. Backtrack by removing `nums[i]` from `current` before continuing the loop to the next `i`.
 
 ```csharp
 public class SubsetSumII
@@ -455,8 +533,7 @@ public class SubsetSumII
 **Time Complexity:** `O(2^n * n)` — there are up to `2^n` unique subsets, and each is copied into the result at cost `O(n)`; the duplicate-skip check avoids doing redundant recursive work for repeated values but does not change the asymptotic bound in the worst case (all-distinct array).
 **Space Complexity:** `O(n)` recursion depth, plus `O(2^n * n)` for the output storage.
 
-**Explanation (dry run of the duplicate-skipping logic):**
-Using `nums = [1, 2, 2]` (already sorted):
+**Walkthrough:** Dry run of the duplicate-skipping logic, using `nums = [1, 2, 2]` (already sorted):
 
 - `Solve(start=0, current=[])` → record `[]`
   - `i=0`: `nums[0]=1`, `i==start`, no skip. Pick `1` → `current=[1]` → `Solve(start=1, current=[1])` → record `[1]`

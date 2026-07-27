@@ -22,6 +22,12 @@ A ninja has to train for `n` days. On each day he can perform exactly one of 3 a
 **Approach 1 — Recursion:**
 Define `f(day, last)` = max points obtainable from day `0` to `day`, given that activity `last` was used on the day after (`day+1`), so `last` cannot be repeated on `day`. Try all 3 activities except `last` and recurse to `day-1`.
 
+**Logic (Steps):**
+1. State: `Solve(day, last)` = maximum points earnable across days `0..day`, given that activity `last` (0, 1, 2, or 3 for "none") was performed on day `day+1` and cannot be repeated on `day`.
+2. Base case: `day == 0` — pick the best activity among the 3 that isn't `last`.
+3. Transition: for `day > 0`, try every `task != last`, and take `points[day, task] + Solve(day-1, task)`; keep the maximum over all valid tasks.
+4. The answer is `Solve(n-1, 3)`, starting with no restriction (`last = 3`) on the final day.
+
 ```csharp
 public class NinjaTrainingRecursion
 {
@@ -61,8 +67,16 @@ public class NinjaTrainingRecursion
 Time Complexity: `O(3^n)` — for every day we branch into (up to) 3 choices, giving an exponential blowup.
 Space Complexity: `O(n)` — recursion stack depth.
 
+**Walkthrough:** For `points = [[10,40,70],[20,50,80],[30,60,90]]`, `n=3`: `Solve(2,3)` tries all 3 tasks. Task 2 gives `90 + Solve(1,2)`. `Solve(1,2)` excludes task 2, so it compares task 0 (`20+Solve(0,0)`) and task 1 (`50+Solve(0,1)`); `Solve(0,0)` = best of tasks {1,2} at day0 = `70`, `Solve(0,1)` = best of tasks {0,2} = `70`, giving `20+70=90` or `50+70=120`, so `Solve(1,2)=120`. Then task 2 branch = `90+120=210`. Checking other branches confirms `210` is the overall max, matching the expected output `210`.
+
 **Approach 2 — Memoization:**
 State is `(day, last)` where `day` ranges over `n` values and `last` over `4` values (0, 1, 2, or 3 for "none"). Cache results in a 2D array.
+
+**Logic (Steps):**
+1. State: `dp[day, last]` caches `Solve(day, last)` once computed, over a `n x 4` table initialized to `-1`.
+2. Base case unchanged: `day == 0` picks the best of the 2 remaining tasks.
+3. Before computing, check `dp[day, last]`; if set, return it. Otherwise run the same task loop as recursion.
+4. Store the result in `dp[day, last]` before returning.
 
 ```csharp
 public class NinjaTrainingMemoization
@@ -113,8 +127,16 @@ public class NinjaTrainingMemoization
 Time Complexity: `O(n * 4 * 3)` ≈ `O(n)` — each of the `n * 4` states is computed once, with an inner loop of 3.
 Space Complexity: `O(n * 4)` for the memo table + `O(n)` recursion stack.
 
+**Walkthrough:** For `points = [[10,40,70],[20,50,80],[30,60,90]]`: computing `Solve(2,3)` requires `Solve(1,2)` which requires `Solve(0,0)` and `Solve(0,1)` — each solved once and cached. Reusing `dp[1,2]=120` (as derived above), `Solve(2,3)` evaluates to `210`, matching the expected output, with every `(day,last)` state computed only once.
+
 **Approach 3 — Tabulation:**
 Build `dp[day, last]` bottom-up starting from day 0 up to day `n-1`.
+
+**Logic (Steps):**
+1. State: `dp[day, last]` = max points across days `0..day`, given activity `last` is forbidden on day `day`.
+2. Base case: for `day == 0`, set `dp[0, last]` to the best single-day score excluding `last`, for each of the 4 possible `last` values.
+3. Transition: for `day` from `1` to `n-1`, and each `last` from `0` to `3`, try every `task != last` and take `points[day, task] + dp[day-1, task]`, keeping the max.
+4. Iteration order: day-by-day left to right, since `dp[day]` only depends on `dp[day-1]`. The answer is `dp[n-1, 3]` (no restriction on the final day considered).
 
 ```csharp
 public class NinjaTrainingTabulation
@@ -153,8 +175,16 @@ public class NinjaTrainingTabulation
 Time Complexity: `O(n * 4 * 3)` ≈ `O(n)`.
 Space Complexity: `O(n * 4)` for the DP table, no recursion stack.
 
+**Walkthrough:** For `points = [[10,40,70],[20,50,80],[30,60,90]]`: `dp[0] = [max(20,80... )]`... concretely `dp[0,0]=max(40,70)=70`, `dp[0,1]=max(10,70)=70`, `dp[0,2]=max(10,40)=40`, `dp[0,3]=max(10,40,70)=70`. Then `dp[1,2]=max(20+dp[0,0], 50+dp[0,1])=max(90,120)=120` (task 2 excluded). Continuing to `dp[2,3]=max(30+dp[1,1], 60+dp[1,0], 90+dp[1,2])`, the task-2 branch `90+120=210` wins, giving `dp[2,3]=210`, matching the expected output.
+
 **Approach 4 — Space Optimization:**
 Since `dp[day]` only depends on `dp[day - 1]`, keep just a rolling array of size 4 instead of the full `n x 4` table.
+
+**Logic (Steps):**
+1. State: replace the `n x 4` table with a single rolling array `prev[4]` (representing `dp[day-1]`) and a freshly built `curr[4]` each iteration (representing `dp[day]`).
+2. Base case: initialize `prev` from day 0 exactly as before.
+3. Transition: for each `day` from `1` to `n-1`, compute `curr[last]` for each of the 4 `last` values using `points[day, task] + prev[task]` for `task != last`.
+4. After filling `curr`, set `prev = curr` and move to the next day; the answer is `prev[3]` after the loop ends.
 
 ```csharp
 public class NinjaTrainingSpaceOptimized
@@ -194,6 +224,8 @@ public class NinjaTrainingSpaceOptimized
 Time Complexity: `O(n * 4 * 3)` ≈ `O(n)`.
 Space Complexity: `O(4)` ≈ `O(1)` — only two rolling rows of constant size 4 are kept instead of the full `n x 4` table.
 
+**Walkthrough:** For `points = [[10,40,70],[20,50,80],[30,60,90]]`: `prev = [70, 70, 40, 70]` after day 0. Day 1 gives `curr = [max(50+40,80+70), max(20+70,80+70), max(20+70,50+70), max(20,50,80)+70... ]`, concretely `curr[2]=max(20+prev[0],50+prev[1])=max(90,120)=120`. After `prev=curr`, day 2 computes `curr[3]=max(30+prev[0], 60+prev[1], 90+prev[2])=max(30+70,60+70,90+120)=210`. Final `prev[3]=210`, matching the expected output.
+
 ---
 
 ## 2. Grid Unique Paths
@@ -210,6 +242,12 @@ Given a grid of size `m x n`, a robot starts at the top-left cell `(0, 0)` and w
 
 **Approach 1 — Recursion:**
 `f(i, j)` = number of paths to reach `(i, j)` from `(0, 0)` = `f(i-1, j) + f(i, j-1)`.
+
+**Logic (Steps):**
+1. State: `Solve(i, j)` = number of unique paths from `(0,0)` to `(i,j)`.
+2. Base cases: `Solve(0,0) = 1` (already at start); `Solve(i,j) = 0` if `i < 0` or `j < 0` (out of bounds).
+3. Transition: `Solve(i, j) = Solve(i-1, j) + Solve(i, j-1)` — a path to `(i,j)` arrives either from above or from the left.
+4. The answer is `Solve(m-1, n-1)`.
 
 ```csharp
 public class UniquePathsRecursion
@@ -234,8 +272,16 @@ public class UniquePathsRecursion
 Time Complexity: `O(2^(m+n))` — each cell branches into two recursive calls, roughly doubling with each step down the diagonal.
 Space Complexity: `O(m + n)` — recursion stack depth.
 
+**Walkthrough:** For `m=3, n=3`: `Solve(2,2) = Solve(1,2) + Solve(2,1)`. Expanding, `Solve(1,2)=Solve(0,2)+Solve(1,1)=1+2=3` and `Solve(2,1)=Solve(1,1)+Solve(2,0)=2+1=3`. So `Solve(2,2)=3+3=6`, matching the expected output `6`.
+
 **Approach 2 — Memoization:**
 Cache `f(i, j)` in a 2D array of size `m x n`.
+
+**Logic (Steps):**
+1. State: `dp[i,j]` caches `Solve(i,j)` once computed, initialized to `-1` over an `m x n` table.
+2. Base cases unchanged: `(0,0)` returns `1`; out-of-bounds returns `0`.
+3. Before computing, check `dp[i,j]`; if set, return it. Otherwise compute `Solve(i-1,j) + Solve(i,j-1)`.
+4. Store the result in `dp[i,j]` before returning.
 
 ```csharp
 public class UniquePathsMemoization
@@ -269,8 +315,16 @@ public class UniquePathsMemoization
 Time Complexity: `O(m * n)` — each state is computed once.
 Space Complexity: `O(m * n)` for the memo table + `O(m + n)` recursion stack.
 
+**Walkthrough:** For `m=3, n=3`: computing `Solve(2,2)` needs `Solve(1,2)` and `Solve(2,1)`, both of which need `Solve(1,1)` — computed once and cached as `dp[1,1]=2`. Reusing it, `Solve(2,2)` evaluates to `6`, matching the expected output, without recomputing `Solve(1,1)` twice.
+
 **Approach 3 — Tabulation:**
 Fill `dp[i, j]` from `(0, 0)` upward/leftward outward.
+
+**Logic (Steps):**
+1. State: `dp[i,j]` = number of unique paths from `(0,0)` to `(i,j)`.
+2. Base case: `dp[0,0] = 1`.
+3. Transition: `dp[i,j] = up + left`, where `up = dp[i-1,j]` if `i>0` else `0`, and `left = dp[i,j-1]` if `j>0` else `0`.
+4. Iteration order: row by row, left to right, since each cell depends only on the cell above and the cell to its left. Answer is `dp[m-1,n-1]`.
 
 ```csharp
 public class UniquePathsTabulation
@@ -303,8 +357,16 @@ public class UniquePathsTabulation
 Time Complexity: `O(m * n)`.
 Space Complexity: `O(m * n)` for the DP table.
 
+**Walkthrough:** For `m=3, n=3`: row 0 → `dp[0]=[1,1,1]`; row 1 → `dp[1][0]=dp[0][0]=1`, `dp[1][1]=dp[0][1]+dp[1][0]=1+1=2`, `dp[1][2]=dp[0][2]+dp[1][1]=1+2=3`; row 2 → `dp[2][0]=1`, `dp[2][1]=dp[1][1]+dp[2][0]=2+1=3`, `dp[2][2]=dp[1][2]+dp[2][1]=3+3=6`. Final `dp[2][2]=6`, matching the expected output.
+
 **Approach 4 — Space Optimization:**
 Only the previous row is needed to compute the current row, so keep a single rolling 1D array of size `n`.
+
+**Logic (Steps):**
+1. State: replace the `m x n` table with a rolling row `prev` (representing row `i-1`) and a freshly built `curr` (row `i`).
+2. Base case: `curr[0] = 1` when `i == 0 && j == 0`.
+3. Transition: `curr[j] = up + left`, where `up = prev[j]` and `left = curr[j-1]` if `j>0` else `0`.
+4. Iteration order: row by row; after finishing a row, set `prev = curr`. The answer is `prev[n-1]` after the last row.
 
 ```csharp
 public class UniquePathsSpaceOptimized
@@ -339,6 +401,8 @@ public class UniquePathsSpaceOptimized
 Time Complexity: `O(m * n)`.
 Space Complexity: `O(n)` — only two rolling rows (`prev` and `curr`) instead of the full `m x n` table.
 
+**Walkthrough:** For `m=3, n=3`: `prev=[1,1,1]` after row 0. Row 1: `curr=[1, 1+1=2, 2+1=3]`, then `prev=[1,2,3]`. Row 2: `curr=[1, 2+1=3, 3+3=6]`. Final `curr[2]=6`, matching the expected output.
+
 ---
 
 ## 3. Grid Unique Paths II
@@ -362,6 +426,12 @@ Same as Grid Unique Paths, but now the grid contains obstacles marked `1` (a `0`
 
 **Approach 1 — Recursion:**
 Same recurrence as unique paths, but return `0` immediately if the current cell is an obstacle.
+
+**Logic (Steps):**
+1. State: `Solve(i,j)` = number of unique obstacle-free paths from `(0,0)` to `(i,j)`.
+2. Base cases: return `0` if out of bounds or `grid[i,j] == 1` (obstacle); return `1` if `(i,j) == (0,0)`.
+3. Transition: `Solve(i,j) = Solve(i-1,j) + Solve(i,j-1)`, same as unique paths, but any obstacle cell instantly contributes `0` to whichever branch reaches it.
+4. Also short-circuit to `0` up front if the start or end cell itself is blocked. The answer is `Solve(m-1,n-1)`.
 
 ```csharp
 public class UniquePathsWithObstaclesRecursion
@@ -387,8 +457,16 @@ public class UniquePathsWithObstaclesRecursion
 Time Complexity: `O(2^(m+n))` — same exponential branching as the obstacle-free version, since obstacles only prune some branches.
 Space Complexity: `O(m + n)` — recursion stack depth.
 
+**Walkthrough:** For `grid = [[0,0,0],[0,1,0],[0,0,0]]`: `Solve(2,2)=Solve(1,2)+Solve(2,1)`. `Solve(1,2)=Solve(0,2)+Solve(1,1)`; since `grid[1,1]=1`, `Solve(1,1)=0`, and `Solve(0,2)=1` (top row is free), so `Solve(1,2)=1`. Similarly `Solve(2,1)=Solve(1,1)+Solve(2,0)=0+1=1`. Total `Solve(2,2)=1+1=2`, matching the expected output `2`.
+
 **Approach 2 — Memoization:**
 Cache results per `(i, j)` exactly like before, short-circuiting on obstacles before consulting/using the cache.
+
+**Logic (Steps):**
+1. State: `dp[i,j]` caches `Solve(i,j)`, initialized to `-1`.
+2. Base cases unchanged: out-of-bounds or obstacle returns `0`; `(0,0)` returns `1`.
+3. Before computing, check `dp[i,j]`; if set, return it. Otherwise compute `Solve(i-1,j) + Solve(i,j-1)`.
+4. Store the result in `dp[i,j]` before returning.
 
 ```csharp
 public class UniquePathsWithObstaclesMemoization
@@ -424,8 +502,16 @@ public class UniquePathsWithObstaclesMemoization
 Time Complexity: `O(m * n)`.
 Space Complexity: `O(m * n)` for the memo table + `O(m + n)` recursion stack.
 
+**Walkthrough:** For `grid = [[0,0,0],[0,1,0],[0,0,0]]`: computing `Solve(2,2)` reuses cached `dp[1,1]=0` (obstacle) for both branches, giving `dp[1,2]=1` and `dp[2,1]=1`, so `Solve(2,2)=2`, matching the expected output.
+
 **Approach 3 — Tabulation:**
 Fill `dp[i, j]` = `0` whenever the cell is an obstacle, otherwise sum from top and left.
+
+**Logic (Steps):**
+1. State: `dp[i,j]` = number of obstacle-free paths from `(0,0)` to `(i,j)`.
+2. Base case: `dp[0,0] = 1` (assuming it's not itself an obstacle).
+3. Transition: if `grid[i,j] == 1`, set `dp[i,j] = 0`; otherwise `dp[i,j] = up + left`, using `0` for out-of-bounds neighbors.
+4. Iteration order: row by row, left to right. Answer is `dp[m-1,n-1]`.
 
 ```csharp
 public class UniquePathsWithObstaclesTabulation
@@ -464,8 +550,16 @@ public class UniquePathsWithObstaclesTabulation
 Time Complexity: `O(m * n)`.
 Space Complexity: `O(m * n)` for the DP table.
 
+**Walkthrough:** For `grid = [[0,0,0],[0,1,0],[0,0,0]]`: `dp[0]=[1,1,1]`. Row 1: `dp[1][0]=1`, `dp[1][1]=0` (obstacle), `dp[1][2]=dp[0][2]+dp[1][1]=1+0=1`. Row 2: `dp[2][0]=1`, `dp[2][1]=dp[1][1]+dp[2][0]=0+1=1`, `dp[2][2]=dp[1][2]+dp[2][1]=1+1=2`. Final `dp[2][2]=2`, matching the expected output.
+
 **Approach 4 — Space Optimization:**
 Roll the row exactly as in problem 2, zeroing out obstacle cells in the current row.
+
+**Logic (Steps):**
+1. State: replace the `m x n` table with rolling rows `prev` (row `i-1`) and `curr` (row `i`).
+2. Base case: `curr[0] = 1` at `(0,0)`, unless it is itself an obstacle.
+3. Transition: if `grid[i,j] == 1`, `curr[j] = 0`; otherwise `curr[j] = prev[j] + (j>0 ? curr[j-1] : 0)`.
+4. Iteration order: row by row; set `prev = curr` after each row. Answer is `prev[n-1]`.
 
 ```csharp
 public class UniquePathsWithObstaclesSpaceOptimized

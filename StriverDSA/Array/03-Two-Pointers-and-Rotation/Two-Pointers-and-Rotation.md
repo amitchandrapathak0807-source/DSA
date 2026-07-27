@@ -13,6 +13,11 @@
 
 **Brute Force Approach:** Store the first element in a temporary variable, shift every remaining element one position to the left, then place the temporary value at the last index. This only needs a single extra variable (not a full temp array), so it is effectively already optimal, but conceptually it is the straightforward "shift and wrap" approach.
 
+**Logic (Steps):**
+1. Save `arr[0]` into a variable `first` so it isn't lost.
+2. Shift every element one position left: `arr[i] = arr[i+1]` for `i` from `0` to `n-2`.
+3. Place the saved `first` value into the last index `arr[n-1]`.
+
 ```csharp
 public static int[] LeftRotateByOne(int[] arr)
 {
@@ -35,7 +40,16 @@ public static int[] LeftRotateByOne(int[] arr)
 **Time Complexity:** O(n) — we make a single pass through the array to shift every element once.
 **Space Complexity:** O(1) — only one extra integer variable (`first`) is used, no extra array.
 
+**Walkthrough:** For `arr = [1, 2, 3, 4, 5]`: `first = 1`, shifting gives `[2,3,4,5,5]`, then `arr[4] = first = 1` → `[2,3,4,5,1]` ✔ matches Output.
+
+---
+
 **Optimized Approach:** This brute force solution is already optimal for rotating by one place — there is no better way than touching each element once. The same code is repeated below as the "optimized" version since no further improvement is possible for this specific sub-problem.
+
+**Logic (Steps):**
+1. Save `arr[0]` into `temp`.
+2. Shift every remaining element one position left in a single loop.
+3. Write `temp` into the final index to complete the wrap-around.
 
 ```csharp
 public static void LeftRotateByOneInPlace(int[] arr)
@@ -54,7 +68,7 @@ public static void LeftRotateByOneInPlace(int[] arr)
 
 Time Complexity: O(n), Space Complexity: O(1)
 
-**Explanation:** Dry run on `arr = [1, 2, 3, 4, 5]`:
+**Walkthrough:** Dry run on `arr = [1, 2, 3, 4, 5]`:
 1. `temp = arr[0] = 1`
 2. `arr[0] = arr[1] = 2` → `[2, 2, 3, 4, 5]`
 3. `arr[1] = arr[2] = 3` → `[2, 3, 3, 4, 5]`
@@ -62,7 +76,7 @@ Time Complexity: O(n), Space Complexity: O(1)
 5. `arr[3] = arr[4] = 5` → `[2, 3, 4, 5, 5]`
 6. `arr[4] = temp = 1` → `[2, 3, 4, 5, 1]`
 
-Final array: `[2, 3, 4, 5, 1]`, which matches the expected output.
+Final array: `[2, 3, 4, 5, 1]` ✔ matches Output.
 
 ---
 
@@ -78,6 +92,12 @@ Final array: `[2, 3, 4, 5, 1]`, which matches the expected output.
 - Explanation: The first two elements `[1, 2]` are moved to the end, while `[3, 4, 5]` shift to the front, preserving order.
 
 **Brute Force Approach:** Use a temporary array to hold the first `d` elements, shift the remaining `n - d` elements to the front of the original array, and then copy the temporary elements to the end. This uses O(d) extra space.
+
+**Logic (Steps):**
+1. Normalize `d` with `d = d % n` to handle rotations larger than the array length.
+2. Copy the first `d` elements into a `temp` array.
+3. Shift the remaining `n - d` elements left by `d` positions to fill the front of `arr`.
+4. Copy the saved `temp` elements into the last `d` positions of `arr`.
 
 ```csharp
 public static int[] LeftRotateByD_Brute(int[] arr, int d)
@@ -115,12 +135,22 @@ public static int[] LeftRotateByD_Brute(int[] arr, int d)
 Time Complexity: O(n) — one pass to copy `d` elements into `temp`, one pass to shift `n - d` elements, and one pass to copy `d` elements back; all linear in `n`.
 Space Complexity: O(d) — extra temporary array of size `d` is used.
 
+**Walkthrough:** For `arr = [1, 2, 3, 4, 5], d = 2`: `temp = [1,2]`, shift remaining `[3,4,5]` to front → `[3,4,5,4,5]`, copy `temp` to the end → `[3,4,5,1,2]` ✔ matches Output.
+
+---
+
 **Optimized Approach:** Use the **reversal algorithm** to rotate in-place with O(1) extra space:
 1. Reverse the first `d` elements.
 2. Reverse the remaining `n - d` elements.
 3. Reverse the whole array.
 
 This works because reversing sub-segments and then the whole array effectively re-orders the blocks without needing extra storage.
+
+**Logic (Steps):**
+1. Normalize `d` with `d = d % n`.
+2. Reverse the sub-array `arr[0..d-1]` (the block that will move to the end).
+3. Reverse the sub-array `arr[d..n-1]` (the block that will move to the front).
+4. Reverse the entire array `arr[0..n-1]`, which flips both reversed blocks back into correct internal order while swapping their positions.
 
 ```csharp
 public static void LeftRotateByD_Optimal(int[] arr, int d)
@@ -151,7 +181,7 @@ private static void Reverse(int[] arr, int start, int end)
 
 Time Complexity: O(n), Space Complexity: O(1)
 
-**Explanation:** The reversal trick relies on a neat property: if you reverse two adjacent blocks individually and then reverse the entire combined sequence, the blocks end up swapped while each block's internal order is restored to the original.
+**Walkthrough:** The reversal trick relies on a neat property: if you reverse two adjacent blocks individually and then reverse the entire combined sequence, the blocks end up swapped while each block's internal order is restored to the original.
 
 Dry run on `arr = [1, 2, 3, 4, 5], d = 2`:
 
@@ -180,6 +210,11 @@ Final array: `[3, 4, 5, 1, 2]`, which matches the expected output. The `d = d % 
 - Explanation: The non-zero elements `1, 3, 12` retain their relative order and are moved to the front, while both `0`s are pushed to the end.
 
 **Brute Force Approach:** Create a temporary array/list, copy all non-zero elements into it in order, then fill the rest of the temporary array with zeros, and finally copy it back into the original array. This uses O(n) extra space.
+
+**Logic (Steps):**
+1. Traverse the array, collecting every non-zero value into a `temp` list, preserving order.
+2. Copy the `temp` values back into the front of `arr`.
+3. Fill the remaining tail positions of `arr` with `0`s.
 
 ```csharp
 public static void MoveZeros_Brute(int[] arr)
@@ -214,7 +249,17 @@ public static void MoveZeros_Brute(int[] arr)
 Time Complexity: O(n) — one pass to collect non-zero elements, one pass to copy them back, one pass to fill zeros; all linear.
 Space Complexity: O(n) — extra list to store non-zero elements.
 
+**Walkthrough:** For `arr = [0, 1, 0, 3, 12]`: `temp = [1, 3, 12]`, copy to front → `[1,3,12,3,12]`, fill remaining tail with zeros → `[1,3,12,0,0]` ✔ matches Output.
+
+---
+
 **Optimized Approach:** Use the **two-pointer (read/write) technique** to solve this in-place with O(1) extra space. Maintain a `writeIndex` (or "insert position") that tracks where the next non-zero element should go, and a `readIndex` that scans through the array. Whenever a non-zero element is found at `readIndex`, swap it with `arr[writeIndex]` and advance `writeIndex`.
+
+**Logic (Steps):**
+1. Initialize `writeIndex = 0`.
+2. Scan the array with `readIndex` from `0` to `n-1`.
+3. Whenever `arr[readIndex] != 0`, swap `arr[writeIndex]` and `arr[readIndex]`, then increment `writeIndex`.
+4. Zero values are naturally left behind and pushed rightward as non-zero elements are swapped past them.
 
 ```csharp
 public static void MoveZeros_Optimal(int[] arr)
@@ -238,7 +283,7 @@ public static void MoveZeros_Optimal(int[] arr)
 
 Time Complexity: O(n), Space Complexity: O(1)
 
-**Explanation:** The invariant maintained is: **at all times, every element in `arr[0..writeIndex-1]` is non-zero**, and `writeIndex` marks the next free slot for a non-zero element. `readIndex` scans ahead looking for non-zero values; when found, it is swapped into the `writeIndex` slot. Since `writeIndex` never advances past `readIndex`, the swap either places the non-zero element directly (when `writeIndex == readIndex`, a no-op swap) or swaps it with a zero that was left behind earlier (when `writeIndex < readIndex`), pushing that zero further to the right.
+**Walkthrough:** The invariant maintained is: **at all times, every element in `arr[0..writeIndex-1]` is non-zero**, and `writeIndex` marks the next free slot for a non-zero element. `readIndex` scans ahead looking for non-zero values; when found, it is swapped into the `writeIndex` slot. Since `writeIndex` never advances past `readIndex`, the swap either places the non-zero element directly (when `writeIndex == readIndex`, a no-op swap) or swaps it with a zero that was left behind earlier (when `writeIndex < readIndex`), pushing that zero further to the right.
 
 Dry run on `arr = [0, 1, 0, 3, 12]`, `writeIndex = 0`:
 

@@ -10,6 +10,13 @@
 - Explanation: `0` is located at index `4` in the rotated array.
 
 **Brute Force Approach:** linear scan O(n).
+
+**Logic (Steps):**
+1. Loop `i` from `0` to `arr.Length - 1`.
+2. Compare `arr[i]` with `target`.
+3. If they match, return `i` immediately.
+4. If the loop finishes with no match, return `-1`.
+
 ```csharp
 public class Solution
 {
@@ -27,7 +34,21 @@ public class Solution
 Time Complexity: O(n) — every element may need to be checked.
 Space Complexity: O(1) — no extra space used.
 
+**Walkthrough:** Using `arr = [4,5,6,7,0,1,2], target = 0`.
+- `i=0..3`: `4,5,6,7` no match. `i=4`: `0==0` → return `4`.
+Returned value `4` matches the expected output.
+
+---
+
 **Optimized Approach:** modified binary search identifying which half is sorted at each step.
+
+**Logic (Steps):**
+1. Initialize `low = 0`, `high = arr.Length - 1`.
+2. While `low <= high`, compute `mid`; if `arr[mid] == target`, return `mid`.
+3. Determine which half is sorted by comparing `arr[low]` with `arr[mid]` — if `arr[low] <= arr[mid]`, the left half `[low..mid]` is sorted; otherwise the right half `[mid..high]` is sorted.
+4. If `target` falls within the sorted half's value range, search that half; otherwise search the other half.
+5. If the loop exits without a match, return `-1`.
+
 ```csharp
 public class Solution
 {
@@ -68,16 +89,11 @@ public class Solution
 Time Complexity: O(log n) — search space halves every iteration.
 Space Complexity: O(1) — only pointers are used.
 
-**Explanation:** Dry run on `arr = [4,5,6,7,0,1,2], target = 0`:
-- `low = 0, high = 6`, `mid = 3` → `arr[mid] = 7`. Not the target.
-  Check `arr[low] (4) <= arr[mid] (7)` → left half `[4,5,6,7]` is sorted.
-  Is `target (0)` within `[arr[low]=4, arr[mid]=7)`? No, `0 < 4`. So target must be in the right half → `low = mid + 1 = 4`.
-- `low = 4, high = 6`, `mid = 5` → `arr[mid] = 1`. Not the target.
-  Check `arr[low] (0) <= arr[mid] (1)` → left half `[0,1]` is sorted.
-  Is `target (0)` within `[arr[low]=0, arr[mid]=1)`? Yes, `0 <= 0 < 1`. So search left half → `high = mid - 1 = 4`.
-- `low = 4, high = 4`, `mid = 4` → `arr[mid] = 0` — matches target. Return `4`.
-
-The core idea: at every step, one half of the array (relative to `mid`) is guaranteed to be strictly sorted, because a rotated sorted array can have at most one "break point". Comparing `arr[low]` with `arr[mid]` tells us which half is sorted; then we simply check whether the target's value falls within that sorted half's range. If it does, we recurse/iterate into that half; otherwise the target must be in the other (unsorted-looking) half, so we move there.
+**Walkthrough:** Dry run on `arr = [4,5,6,7,0,1,2], target = 0`:
+- `low=0, high=6`, `mid=3` → `arr[mid]=7`, not target. `arr[low]=4 <= arr[mid]=7` → left half `[4,5,6,7]` sorted. `target=0` not in `[4,7)` → search right: `low=4`.
+- `low=4, high=6`, `mid=5` → `arr[mid]=1`, not target. `arr[low]=0 <= arr[mid]=1` → left half `[0,1]` sorted. `target=0` in `[0,1)` → search left: `high=4`.
+- `low=4, high=4`, `mid=4` → `arr[mid]=0` matches. Return `4`.
+Returned value `4` matches the expected output.
 
 ---
 

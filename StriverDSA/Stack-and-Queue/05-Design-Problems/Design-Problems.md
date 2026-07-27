@@ -24,6 +24,13 @@ In a party of `N` people, a celebrity is defined as someone who is known by ever
 **Brute Force Approach:**
 For every candidate person `i`, check whether every other person `j` knows `i` (i.e., `M[j][i] == 1` for all `j != i`) and that `i` knows no one else (i.e., `M[i][j] == 0` for all `j != i`). This requires checking two conditions for every pair, giving `O(n^2)` time.
 
+**Logic (Steps):**
+1. Loop over every candidate `i` from `0` to `n-1`.
+2. For each candidate, assume `isCelebrity = true`, then loop over every other person `j`.
+3. If `M[i, j] == 1` (candidate knows someone) or `M[j, i] == 0` (someone doesn't know the candidate), mark `isCelebrity = false` and break.
+4. If the inner loop completes without disqualifying `i`, return `i` as the celebrity.
+5. If no candidate passes, return `-1`.
+
 ```csharp
 using System;
 
@@ -60,8 +67,20 @@ public class CelebrityBruteForce
 Time Complexity: `O(n^2)` — for each of the `n` candidates, we scan a row of size `n`.
 Space Complexity: `O(1)` — no extra data structures used.
 
+**Walkthrough:** Using `M` from the Example, try candidate `i = 0`: `j = 1`, `M[0,1] = 1` (0 knows 1) → disqualified immediately. Candidate `i = 1`: `M[1,2] = 1` → disqualified. Candidate `i = 2`: `j = 0`, `M[2,0] = 0` and `M[0,2] = 1` (ok); `j = 1`, `M[2,1] = 0` and `M[1,2] = 1` (ok); `j = 3`, `M[2,3] = 0` and `M[3,2] = 1` (ok) — no disqualification, so `isCelebrity` stays `true` and `2` is returned, matching the expected Output of `2`.
+
+---
+
 **Optimized Approach:**
 Use a two-pointer elimination technique. Maintain two pointers, `top = 0` and `down = n - 1`. Compare the pair: if `top` knows `down`, then `top` cannot be the celebrity (a celebrity knows no one), so move `top` forward. Otherwise, `down` cannot be the celebrity (a celebrity is known by everyone, but `down` does not know `top`... actually if `top` does NOT know `down`, then `down` cannot be the celebrity since not everyone knows `down`), so move `down` backward. Continue until `top >= down`; the remaining index is the only possible candidate. Finally, verify this candidate against every other person in one more linear pass, since the elimination only produces a candidate, not a guaranteed celebrity.
+
+**Logic (Steps):**
+1. Initialize `top = 0` and `down = n - 1`.
+2. While `top < down`: compare `M[top, down]`. If it's `1` (top knows down), `top` is disqualified, so `top++`.
+3. Otherwise (top does not know down), `down` is disqualified, so `down--`.
+4. When `top >= down`, the surviving index is the sole candidate.
+5. Run one verification pass over all `j != candidate`, checking `M[candidate, j] == 0` and `M[j, candidate] == 1` for every `j`.
+6. Return the candidate if verification passes, otherwise return `-1`.
 
 ```csharp
 using System;
@@ -106,26 +125,7 @@ public class CelebrityOptimized
 Time Complexity: `O(n)` — the elimination phase takes `O(n)` (each step advances one pointer), and the verification phase takes `O(n)`.
 Space Complexity: `O(1)` — only two pointers used.
 
-**Explanation:**
-
-Dry run of two-pointer elimination on the example matrix:
-```
-      0  1  2  3
-  0 [ 0, 1, 1, 0 ]
-  1 [ 0, 0, 1, 0 ]
-  2 [ 0, 0, 0, 0 ]
-  3 [ 0, 1, 1, 0 ]
-```
-
-- Initialize `top = 0`, `down = 3`.
-- Compare `M[top, down] = M[0, 3] = 0` → top(0) does NOT know down(3) → down cannot be the celebrity (since 0 does not know 3, not everyone knows 3) → `down--` → `down = 2`.
-- Compare `M[top, down] = M[0, 2] = 1` → top(0) knows down(2) → top cannot be the celebrity (a celebrity knows no one) → `top++` → `top = 1`.
-- Now `top = 1`, `down = 2`. Compare `M[1, 2] = 1` → 1 knows 2 → top cannot be celebrity → `top++` → `top = 2`.
-- Now `top == down == 2`, loop ends. Candidate = `2`.
-- Verification pass for candidate 2: check `M[2, 0] = 0`, `M[2, 1] = 0`, `M[2, 3] = 0` (candidate knows no one — good); check `M[0, 2] = 1`, `M[1, 2] = 1`, `M[3, 2] = 1` (everyone knows candidate — good).
-- Candidate 2 passes verification, so `2` is returned as the celebrity.
-
-Why elimination is correct: at each comparison between `top` and `down`, at least one of them is provably NOT the celebrity (either `top` knows someone, disqualifying `top`, or `top` does not know `down`, meaning `down` is not known by everyone, disqualifying `down`). Since in every step exactly one candidate is eliminated and a real celebrity (if one exists) is never eliminated by this rule, after `n - 1` eliminations only one possible candidate remains — which must still be verified because the matrix might not contain a celebrity at all.
+**Walkthrough:** On the example matrix, start `top = 0`, `down = 3`. `M[0,3] = 0` → top does not know down → down is disqualified → `down = 2`. `M[0,2] = 1` → top knows down → top is disqualified → `top = 1`. Now `M[1,2] = 1` → top knows down → `top = 2`. Loop ends since `top == down == 2`; candidate = `2`. Verification: `M[2,0]=0`, `M[2,1]=0`, `M[2,3]=0` (candidate knows no one) and `M[0,2]=1`, `M[1,2]=1`, `M[3,2]=1` (everyone knows candidate) — all checks pass, so `2` is returned, matching the expected Output. Correctness relies on each comparison eliminating exactly one non-celebrity (never the real celebrity), leaving one candidate after at most `n-1` steps, which is then verified.
 
 ---
 
@@ -157,6 +157,12 @@ Both `get` and `put` must run in `O(1)` average time complexity.
 
 **Brute Force Approach:**
 Use a `Dictionary<int, int>` for key-value storage plus a `List<int>` to track usage order. On every `get` or `put`, move the accessed key to the end of the list (marking it most recently used) by removing and re-adding it — an `O(n)` operation. When capacity is exceeded, remove the key at the front of the list (least recently used), which is also `O(n)` for the dictionary-independent search but the list removal from front is `O(n)` due to shifting.
+
+**Logic (Steps):**
+1. `Get(key)`: if `key` is not in `map`, return `-1`. Otherwise remove it from `usageOrder` and re-add it at the end (marks most recently used), then return `map[key]`.
+2. `Put(key, value)`: if `key` already exists, update `map[key]`, then remove and re-add it at the end of `usageOrder`.
+3. If `key` is new and `map.Count >= capacity`, read `usageOrder[0]` (the least recently used key), remove it from `usageOrder` and `map`.
+4. Insert the new key into `map` and append it to the end of `usageOrder`.
 
 ```csharp
 using System;
@@ -213,8 +219,18 @@ public class LRUCacheBruteForce
 Time Complexity: `O(n)` per `get`/`put` due to linear search and shifting in the `List<int>`.
 Space Complexity: `O(capacity)` for the dictionary and the list.
 
+**Walkthrough:** With capacity = 2: `put(1,10)` → `map={1:10}`, `usageOrder=[1]`. `put(2,20)` → `map={1:10,2:20}`, `usageOrder=[1,2]`. `get(1)` → found, move 1 to end → `usageOrder=[2,1]`, returns `10`. `put(3,30)` → new key, `map.Count(2) >= capacity(2)`, evict `usageOrder[0]=2` from both structures → `map={1:10}`, `usageOrder=[1]`; insert 3 → `map={1:10,3:30}`, `usageOrder=[1,3]`. `get(2)` → not in map, returns `-1`, matching the expected trace.
+
+---
+
 **Optimized Approach:**
 Combine a `Dictionary<int, LinkedListNode<(int key, int value)>>` with a doubly linked list (`LinkedList<T>` in C#). The linked list maintains usage order: the head is the most recently used, the tail is the least recently used. The dictionary maps each key directly to its node in the linked list, so both lookup and node removal/insertion are `O(1)`.
+
+**Logic (Steps):**
+1. `Get(key)`: look up `map`; if absent return `-1`. If present, unlink the node from `order` and re-insert it with `AddFirst` (marks most recently used), then return its value.
+2. `Put(key, value)` for an existing key: remove old node from `order`, create/insert a fresh node with the new value at the front, and update `map`.
+3. `Put(key, value)` for a new key at full capacity: read `order.Last` (the least recently used node), `RemoveLast()` from `order`, and remove its key from `map`.
+4. Create a new node for `(key, value)`, insert it at the front of `order` with `AddFirst`, and register it in `map`.
 
 ```csharp
 using System;
@@ -274,17 +290,7 @@ public class LRUCache
 Time Complexity: `O(1)` per `get` and `put` operation.
 Space Complexity: `O(capacity)` for the dictionary and doubly linked list.
 
-**Explanation:**
-
-Dry run with capacity = 2:
-
-1. `put(1, 10)`: cache empty, insert node `(1,10)` at front. List: `[(1,10)]`. Map: `{1 -> node(1,10)}`.
-2. `put(2, 20)`: insert node `(2,20)` at front. List: `[(2,20), (1,10)]`. Map: `{1 -> node(1,10), 2 -> node(2,20)}`.
-3. `get(1)`: found in map, node `(1,10)` is removed from its current position and re-added at front. List becomes: `[(1,10), (2,20)]`. Returns `10`.
-4. `put(3, 30)`: key 3 not present, and `map.Count (2) >= capacity (2)`, so evict tail — which is `(2,20)`, the least recently used — remove it from the list and the map. List: `[(1,10)]`, Map: `{1 -> node(1,10)}`. Insert new node `(3,30)` at front. List: `[(3,30), (1,10)]`. Map: `{1 -> node(1,10), 3 -> node(3,30)}`.
-5. `get(2)`: key 2 no longer in map → returns `-1` (confirms eviction).
-
-This shows why the doubly linked list + dictionary combination achieves O(1): the dictionary gives instant access to any node, and the linked list allows removing/re-inserting that node at the front in constant time without shifting any other elements, unlike an array-based list.
+**Walkthrough:** Capacity = 2. `put(1,10)`: insert node `(1,10)` at front → List: `[(1,10)]`, Map: `{1}`. `put(2,20)`: insert at front → List: `[(2,20),(1,10)]`, Map: `{1,2}`. `get(1)`: found, unlink and `AddFirst` → List: `[(1,10),(2,20)]`, returns `10`. `put(3,30)`: new key, `map.Count(2) >= capacity(2)`, evict `order.Last = (2,20)` → List: `[(1,10)]`, Map: `{1}`; insert `(3,30)` at front → List: `[(3,30),(1,10)]`, Map: `{1,3}`. `get(2)`: key 2 absent from map → returns `-1`, matching the expected trace. The dictionary gives O(1) node access while the linked list reorders/evicts in O(1) without shifting elements.
 
 ---
 
@@ -317,6 +323,12 @@ Both `get` and `put` should run in `O(1)` average time complexity.
 
 **Brute Force Approach:**
 Use a `Dictionary<int, int>` for values and a separate `Dictionary<int, int>` for frequency counts. On eviction, do an `O(n)` linear scan over all keys to find the one with the minimum frequency (breaking ties by insertion/access order tracked separately, e.g., with a simple counter or a list).
+
+**Logic (Steps):**
+1. `Get(key)`: if absent return `-1`; otherwise increment `freq[key]`, stamp `lastUsedTime[key] = clock++`, and return the value.
+2. `Put(key, value)` for an existing key: update the value, increment its frequency, and refresh its timestamp.
+3. `Put(key, value)` for a new key at full capacity: scan every key in `values`, tracking the one with the smallest `freq` (breaking ties with the smallest `lastUsedTime`), and remove that key from `values`, `freq`, and `lastUsedTime`.
+4. Insert the new key with `freq = 1` and `lastUsedTime = clock++`.
 
 ```csharp
 using System;
@@ -393,6 +405,10 @@ public class LFUCacheBruteForce
 Time Complexity: `O(n)` per `put` that triggers eviction, due to the linear scan for the minimum-frequency key; `O(1)` for `get`.
 Space Complexity: `O(capacity)`.
 
+**Walkthrough:** Capacity = 2. `put(1,10)` → `values={1:10}`, `freq={1:1}`. `put(2,20)` → `values={1:10,2:20}`, `freq={1:1,2:1}`. `get(1)` → `freq[1]=2`, `lastUsedTime[1]` updated, returns `10`. `put(3,30)` → capacity full, scan finds key 2 has `freq=1` (smallest), evict it → `values={1:10}`. Insert 3 → `values={1:10,3:30}`, `freq={1:2,3:1}`. `get(2)` → absent, returns `-1`, matching the expected trace of `10, -1, ...`.
+
+---
+
 **Optimized Approach:**
 Use the classic two-level HashMap + doubly linked list design:
 - `keyToNode`: `Dictionary<int, Node>` mapping each key directly to its node (containing key, value, frequency).
@@ -400,6 +416,14 @@ Use the classic two-level HashMap + doubly linked list design:
 - `minFreq`: tracks the smallest frequency currently present, so eviction always pops from the back of `freqToList[minFreq]` in O(1).
 
 On `get`/`put` (update), a key's node is removed from its current frequency bucket and moved to the bucket for `frequency + 1`, added at the front. If the old bucket becomes empty and it was `minFreq`, increment `minFreq`. On `put` of a new key when at capacity, evict the back node of `freqToList[minFreq]` (the least frequently used, and least recently used among ties), then insert the new key with frequency 1 and set `minFreq = 1`.
+
+**Logic (Steps):**
+1. `Touch(node)` (shared by `Get` and update-`Put`): remove the node from `freqToList[oldFreq]`; if that bucket becomes empty, delete it and bump `minFreq` if it matched `oldFreq`.
+2. Increment `node.Value.Freq`, then insert the node at the front of `freqToList[newFreq]` (creating the bucket if needed).
+3. `Get(key)`: if `key` is absent return `-1`; otherwise call `Touch` on its node and return the value.
+4. `Put(key, value)` for an existing key: update the value and call `Touch`.
+5. `Put(key, value)` for a new key at full capacity: evict `freqToList[minFreq].Last` (least frequently used, least recently used among ties), removing it from both the bucket and `keyToNode`.
+6. Insert the new node into `freqToList[1]` at the front, register it in `keyToNode`, and set `minFreq = 1`.
 
 ```csharp
 using System;
@@ -505,21 +529,4 @@ public class LFUCache
 Time Complexity: `O(1)` per `get` and `put` operation.
 Space Complexity: `O(capacity)` for the two dictionaries and the linked lists they hold.
 
-**Explanation:**
-
-Frequency-bucket design summary: instead of one global recency list (as in LRU), the LFU cache keeps one doubly linked list per frequency value. `freqToList[f]` holds all keys currently accessed exactly `f` times, ordered by recency (front = most recently touched at that frequency, back = least recently touched at that frequency). `keyToNode` gives O(1) access to any key's node so it can be unlinked from its current bucket instantly. `minFreq` always points at the lowest non-empty frequency bucket, so eviction is simply "remove the tail node of `freqToList[minFreq]`" — O(1), and it naturally satisfies the tie-breaking rule (least recently used among least frequently used) because ties live in the same bucket, ordered by recency.
-
-Dry run continuing the example (capacity = 2):
-
-1. `put(1, 10)`: `keyToNode = {1}`, `freqToList[1] = [1]`, `minFreq = 1`.
-2. `put(2, 20)`: `keyToNode = {1, 2}`, `freqToList[1] = [2, 1]` (2 added at front), `minFreq = 1`.
-3. `get(1)`: `Touch(1)` — remove 1 from `freqToList[1]` → `freqToList[1] = [2]` (not empty, `minFreq` stays 1); add 1 to `freqToList[2] = [1]`. Now `freq[1] = 2`, `freq[2] = 1`. Returns `10`.
-4. `put(3, 30)`: capacity (2) reached. Evict from `freqToList[minFreq] = freqToList[1] = [2]` → evict tail = key 2. Remove key 2 from `keyToNode`; `freqToList[1]` becomes empty and is removed. Insert key 3: `freqToList[1] = [3]`, `minFreq = 1`. State: `keyToNode = {1, 3}`, `freqToList[1] = [3]`, `freqToList[2] = [1]`.
-5. `get(2)`: key 2 not in `keyToNode` → returns `-1`.
-6. `get(3)`: `Touch(3)` — remove from `freqToList[1]` → empties and removed, `minFreq` becomes 2; add 3 to `freqToList[2] = [3, 1]`. Returns `30`.
-7. `put(4, 40)`: capacity reached. `minFreq = 2`, `freqToList[2] = [3, 1]`, evict tail = key 1 (least recently used among the tied frequency-2 keys). Remove key 1; `freqToList[2] = [3]`. Insert key 4: `freqToList[1] = [4]`, `minFreq = 1`.
-8. `get(1)`: key 1 not present → returns `-1`.
-9. `get(3)`: found, returns `30` (and its frequency/bucket updates accordingly).
-10. `get(4)`: found, returns `40`.
-
-This matches the expected output and demonstrates how the minFreq pointer and per-frequency doubly linked lists together give O(1) eviction while correctly resolving ties by recency.
+**Walkthrough:** Capacity = 2. `put(1,10)`: `freqToList[1]=[1]`, `minFreq=1`. `put(2,20)`: `freqToList[1]=[2,1]`. `get(1)`: `Touch` moves 1 out of bucket 1 (`[2]` remains, `minFreq` stays 1) into bucket 2 (`freqToList[2]=[1]`), returns `10`. `put(3,30)`: capacity full, evict tail of `freqToList[minFreq=1]=[2]` → key 2 removed; insert 3 into bucket 1 → `freqToList[1]=[3]`. `get(2)`: absent → returns `-1`. `get(3)`: `Touch` moves 3 to bucket 2, emptying bucket 1 so `minFreq` becomes 2 → `freqToList[2]=[3,1]`, returns `30`. `put(4,40)`: capacity full, evict tail of `freqToList[2]=[3,1]` → key 1 (least recently used among the frequency-2 tie) removed; insert 4 into bucket 1, `minFreq=1`. `get(1)` → `-1`. `get(3)` → `30`. `get(4)` → `40`. This sequence `10, -1, 30, -1, 30, 40` matches the expected Output, confirming the minFreq pointer and per-frequency buckets correctly resolve ties by recency.

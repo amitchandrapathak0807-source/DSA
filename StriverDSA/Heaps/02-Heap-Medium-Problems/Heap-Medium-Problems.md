@@ -12,6 +12,12 @@ Given an unsorted array `arr` of `n` integers and an integer `k`, find the `k`th
 
 **Brute Force Approach:** Sort the array in ascending order and pick the element at index `n - k`. O(n log n).
 
+**Logic (Steps):**
+1. Clone the array so the original is not mutated.
+2. Sort the clone ascending.
+3. The `k`th largest element is at index `n - k` in ascending sorted order (index `n-1` is the largest, `n-2` the 2nd largest, etc.).
+4. Return `copy[copy.Length - k]`.
+
 ```csharp
 public class Solution
 {
@@ -26,7 +32,16 @@ public class Solution
 Time Complexity: O(n log n) — dominated by sorting.
 Space Complexity: O(n) — for the cloned array (O(1) extra if sorting in place is acceptable).
 
+**Walkthrough:** With `arr = [3,2,1,5,6,4], k = 2`: clone and sort ascending → `[1,2,3,4,5,6]`. Index `n - k = 6 - 2 = 4` → `copy[4] = 5`. Return `5`, matching the expected output.
+
 **Optimized Approach:** Maintain a min-heap of size `k`. Push every element; whenever the heap size exceeds `k`, pop the smallest. At the end the heap's top (minimum) is the `k`th largest element, because the heap holds exactly the `k` largest elements seen so far, and the smallest of those `k` is the `k`th largest overall.
+
+**Logic (Steps):** (min-heap of size k)
+1. Initialize an empty min-heap `minHeap`.
+2. For each `num` in `arr`, push it onto `minHeap`.
+3. If `minHeap.Count > k` after pushing, pop (dequeue) the smallest element to shrink back to size `k`.
+4. After processing all elements, the heap holds exactly the `k` largest values seen, with the smallest of those at the top.
+5. Return `minHeap.Peek()` — the `k`th largest element overall.
 
 ```csharp
 using System.Collections.Generic;
@@ -54,7 +69,7 @@ public class Solution
 Time Complexity: O(n log k) — each of the n elements does at most one push and one pop on a heap of size at most k.
 Space Complexity: O(k) — the heap never holds more than k elements.
 
-**Explanation:**
+**Walkthrough:**
 Dry run of the size-k min-heap technique on `arr = [3,2,1,5,6,4], k = 2`:
 
 | Step | Element | Action | Heap contents after action |
@@ -82,6 +97,12 @@ Given an unsorted array `arr` of `n` integers and an integer `k`, find the `k`th
 
 **Brute Force Approach:** Sort the array in ascending order and pick the element at index `k - 1`. O(n log n).
 
+**Logic (Steps):**
+1. Clone the array so the original is not mutated.
+2. Sort the clone ascending.
+3. The `k`th smallest element (1-indexed) sits at 0-indexed position `k - 1`.
+4. Return `copy[k - 1]`.
+
 ```csharp
 public class Solution
 {
@@ -96,7 +117,16 @@ public class Solution
 Time Complexity: O(n log n) — dominated by sorting.
 Space Complexity: O(n) — for the cloned array.
 
+**Walkthrough:** With `arr = [7,10,4,3,20,15], k = 3`: clone and sort ascending → `[3,4,7,10,15,20]`. Index `k - 1 = 2` → `copy[2] = 7`. Return `7`, matching the expected output.
+
 **Optimized Approach:** Maintain a max-heap of size `k`. Push every element; whenever the heap size exceeds `k`, pop the largest. At the end the heap's top (maximum) is the `k`th smallest element, because the heap holds exactly the `k` smallest elements seen so far, and the largest of those `k` is the `k`th smallest overall.
+
+**Logic (Steps):** (max-heap of size k, simulated via negated priority)
+1. Initialize an empty `maxHeap`.
+2. For each `num` in `arr`, enqueue it with priority `-num` (so the largest value sorts as smallest priority, becoming the dequeue candidate).
+3. If `maxHeap.Count > k` after pushing, dequeue to remove the element with the largest value, keeping heap size `k`.
+4. After processing all elements, the heap holds exactly the `k` smallest values seen, with the largest of those at the top.
+5. Return `maxHeap.Peek()` — the `k`th smallest element overall.
 
 ```csharp
 using System.Collections.Generic;
@@ -124,7 +154,7 @@ public class Solution
 Time Complexity: O(n log k) — each of the n elements does at most one push and one pop on a heap of size at most k.
 Space Complexity: O(k) — the heap never holds more than k elements.
 
-**Explanation:**
+**Walkthrough:**
 Dry run on `arr = [7,10,4,3,20,15], k = 3` (heap stores values; shown sorted for readability, "top" = largest = next to pop):
 
 | Step | Element | Action | Heap contents after action |
@@ -152,6 +182,11 @@ Given an array of `n` elements where each element is at most `k` positions away 
 
 **Brute Force Approach:** Simply sort the whole array, ignoring the k-sorted property. O(n log n).
 
+**Logic (Steps):**
+1. Clone the array.
+2. Sort the clone ascending using a standard comparison sort (ignores the k-sorted structure entirely).
+3. Return the sorted clone.
+
 ```csharp
 public class Solution
 {
@@ -166,7 +201,16 @@ public class Solution
 Time Complexity: O(n log n) — standard comparison sort, does not exploit the k-sorted structure.
 Space Complexity: O(n) — for the cloned/output array.
 
+**Walkthrough:** With `arr = [6,5,3,2,8,10,9], k = 3`: clone and sort ascending → `[2,3,5,6,8,9,10]`, matching the expected output (the k-sorted structure was ignored entirely).
+
 **Optimized Approach:** Use a min-heap of size `k + 1`. Push the first `k + 1` elements. Then for each remaining element, the heap's minimum is guaranteed to be the next smallest element overall (since no unseen element can be smaller than something more than k positions behind it), so pop it into the result, then push the new element. Finally drain the heap.
+
+**Logic (Steps):**
+1. Push the first `min(k+1, n)` elements of `arr` into a min-heap.
+2. For each remaining element `arr[i]` (from index `k+1` onward), dequeue the current minimum into `result[idx++]`, then enqueue `arr[i]`.
+3. Repeat step 2 for all remaining elements — the heap's minimum at each step is guaranteed correct since no element more than `k` positions ahead can be smaller than one currently in the heap.
+4. Once all elements are pushed, drain the heap by repeatedly dequeuing into `result` until empty.
+5. Return `result`.
 
 ```csharp
 using System.Collections.Generic;
@@ -208,8 +252,13 @@ public class Solution
 Time Complexity: O(n log k) — heap never exceeds size k+1, and every element is pushed and popped once.
 Space Complexity: O(k) — for the heap (plus O(n) for the output array, which is required regardless).
 
-**Explanation:**
-The general technique matches the size-k min-heap idea from Problem 1: instead of dry-running this problem again, note it is directly analogous — the heap always holds a window of `k+1` "candidate smallest" elements, and popping the minimum at each step guarantees correctness because any element not yet seen is too far away to be smaller. See Problem 4 below for a full step-by-step heap dry run in the same spirit (K-way merge).
+**Walkthrough:** With `arr = [6,5,3,2,8,10,9], k = 3`, `initialCount = min(4,7) = 4`. Push `arr[0..3] = 6,5,3,2` → heap = `{2,3,5,6}`.
+- `i=4` (`arr[4]=8`): dequeue min `2` → `result=[2]`; push `8` → heap = `{3,5,6,8}`.
+- `i=5` (`arr[5]=10`): dequeue min `3` → `result=[2,3]`; push `10` → heap = `{5,6,8,10}`.
+- `i=6` (`arr[6]=9`): dequeue min `5` → `result=[2,3,5]`; push `9` → heap = `{6,8,9,10}`.
+- Drain remaining heap in order: `6, 8, 9, 10` → `result = [2,3,5,6,8,9,10]`.
+
+Return `[2,3,5,6,8,9,10]`, matching the expected output. This mirrors the size-k min-heap idea from Problem 1: the heap always holds a window of `k+1` candidate-smallest elements, and popping the minimum at each step is guaranteed correct since no unseen element can be smaller.
 
 ---
 
@@ -224,6 +273,12 @@ Given `k` sorted arrays, merge them into a single sorted array.
 - Explanation: All elements from the 3 sorted arrays combined and sorted.
 
 **Brute Force Approach:** Concatenate all arrays into one list, then sort it. O(n log n) where n is the total number of elements.
+
+**Logic (Steps):**
+1. Create an empty `List<int> all`.
+2. Append every element of every input array into `all` via `AddRange`.
+3. Sort `all` ascending (ignores that each sub-array was already sorted).
+4. Return `all` as an array.
 
 ```csharp
 using System.Collections.Generic;

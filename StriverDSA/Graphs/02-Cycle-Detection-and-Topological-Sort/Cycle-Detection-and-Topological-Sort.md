@@ -26,6 +26,13 @@ The problems below build up from raw cycle detection, to the two topological-sor
 
 **Approach:** Unlike undirected-graph cycle detection (where visiting an already-visited neighbor other than the parent means a cycle), a directed graph needs a second array: `inRecursionStack[]` (or `inStack[]`). Do a DFS; mark a node `visited` when first reached and `inStack = true` while it is on the current recursion path. If DFS reaches a neighbor that is `visited` **and** currently `inStack`, that is a **back edge**, which means a cycle. When DFS finishes exploring a node (returns from recursion), unmark it from `inStack` (but leave it `visited`) because it is no longer on the active path. If a neighbor is `visited` but not `inStack`, it was already fully explored via another path and is safe (not a cycle).
 
+**Logic (Steps):**
+1. Create two `bool[]` arrays: `visited` (ever reached) and `inStack` (currently on the active DFS path).
+2. Loop over all vertices; for each unvisited one, launch a DFS to cover disconnected components.
+3. Inside DFS, mark `node` both `visited` and `inStack = true`.
+4. For each neighbor: if unvisited, recurse (propagate `true` if it finds a cycle); if visited **and** `inStack[neighbor]` is true, a back edge to a node on the current path is found — return `true` (cycle).
+5. After exploring all neighbors, unmark `inStack[node] = false` (backtrack) since the node is no longer on the active path, then return `false`.
+
 ```csharp
 public class Solution {
     public bool HasCycle(int V, List<List<int>> adj) {
@@ -61,7 +68,7 @@ public class Solution {
 
 Time Complexity: O(V+E). Space Complexity: O(V+E).
 
-**Explanation:** For `edges = [[0,1],[1,2],[2,3],[3,1]]`: DFS starts at `0`, marks `visited[0]=inStack[0]=true`, moves to `1` (`visited[1]=inStack[1]=true`), moves to `2` (`visited[2]=inStack[2]=true`), moves to `3` (`visited[3]=inStack[3]=true`). Node `3`'s neighbor is `1`, which is `visited=true` and `inStack=true` — a back edge is found, so the function immediately returns `true` up the call chain and `HasCycle` reports a cycle. Note that if the edge were `3 -> 0` instead of `3 -> 1`, and `0`'s `inStack` had already been reset to `false`... but `0` is still on the stack here too, so it would also be a cycle; the key distinguishing case is a node that is `visited` but has already been popped off (`inStack=false`), which is *not* flagged as a cycle since it represents a DAG-style shared descendant, not a back edge.
+**Walkthrough:** For `edges = [[0,1],[1,2],[2,3],[3,1]]`: DFS starts at `0`, marks `visited[0]=inStack[0]=true`, moves to `1` (`visited[1]=inStack[1]=true`), moves to `2` (`visited[2]=inStack[2]=true`), moves to `3` (`visited[3]=inStack[3]=true`). Node `3`'s neighbor is `1`, which is `visited=true` and `inStack=true` — a back edge is found, so the function immediately returns `true` up the call chain and `HasCycle` reports `true`, matching the expected output. Note that if the edge were `3 -> 0` instead of `3 -> 1`, `0` would still be on the stack too, so it would also be a cycle; the key distinguishing case is a node that is `visited` but has already been popped off (`inStack=false`), which is *not* flagged as a cycle since it represents a DAG-style shared descendant, not a back edge.
 
 ---
 
@@ -75,6 +82,13 @@ Time Complexity: O(V+E). Space Complexity: O(V+E).
 - Explanation: `5` and `4` have no incoming edges so they can come first; `0` and `1` have edges pointing into them from several nodes so they end up last.
 
 **Approach:** Run a standard DFS. The key insight is: a node should appear in the topological order **after** all nodes reachable from it. So, after fully exploring all of a node's descendants (post-order — i.e., after the recursive DFS calls for all neighbors return), push that node onto a stack. Once DFS from all unvisited nodes finishes, popping the stack from top to bottom gives a valid topological order, because a node is only pushed after everything it depends on (its descendants) has already been pushed.
+
+**Logic (Steps):**
+1. Create a `bool[] visited` array and a `Stack<int>` to collect the post-order.
+2. Loop over all vertices; for each unvisited one, run DFS to also handle disconnected components.
+3. Inside DFS, mark `node` visited, then recurse into every unvisited neighbor first (depth-first).
+4. Only after all of a node's neighbors (and their descendants) have been fully recursed into, push `node` onto the stack — this post-order guarantees dependents are pushed before their dependencies.
+5. Once all DFS calls finish, pop the stack from top to bottom into `result` — this gives a valid topological order since each node is popped only after everything reachable from it was already popped.
 
 ```csharp
 public class Solution {
@@ -110,7 +124,7 @@ public class Solution {
 
 Time Complexity: O(V+E). Space Complexity: O(V+E).
 
-**Explanation:** For `edges = [[5,2],[5,0],[4,0],[4,1],[2,3],[3,1]]`: starting DFS at `0`, it has no outgoing edges, so it is pushed immediately: stack = `[0]`. DFS at `1`: no outgoing edges, pushed: stack = `[0, 1]`. DFS at `2`: goes to `3`, `3` goes to `1` (already visited), so `3` is pushed (stack = `[0,1,3]`), then `2` is pushed (stack = `[0,1,3,2]`). DFS at `3`, `4`, `5` are already visited or get visited: `4` goes to `0` (visited) and `1` (visited), so `4` is pushed (stack = `[0,1,3,2,4]`). `5` goes to `2` (visited) and `0` (visited), so `5` is pushed last (stack = `[0,1,3,2,4,5]`). Popping the stack top to bottom gives `5, 4, 2, 3, 1, 0` — a valid topological order.
+**Walkthrough:** For `edges = [[5,2],[5,0],[4,0],[4,1],[2,3],[3,1]]`: starting DFS at `0`, it has no outgoing edges, so it is pushed immediately: stack = `[0]`. DFS at `1`: no outgoing edges, pushed: stack = `[0, 1]`. DFS at `2`: goes to `3`, `3` goes to `1` (already visited), so `3` is pushed (stack = `[0,1,3]`), then `2` is pushed (stack = `[0,1,3,2]`). DFS at `4`: goes to `0` (visited) and `1` (visited), so `4` is pushed (stack = `[0,1,3,2,4]`). DFS at `5`: goes to `2` (visited) and `0` (visited), so `5` is pushed last (stack = `[0,1,3,2,4,5]`). Popping the stack top to bottom gives `5, 4, 2, 3, 1, 0` — a valid topological order, matching the expected output.
 
 ---
 
@@ -124,6 +138,13 @@ Time Complexity: O(V+E). Space Complexity: O(V+E).
 - Explanation: Nodes with in-degree `0` (`4` and `5`) are processed first; as their outgoing edges are "removed", new nodes reach in-degree `0` and join the queue.
 
 **Approach (Kahn's Algorithm):** Compute the **in-degree** (number of incoming edges) of every vertex. Push all vertices with in-degree `0` into a queue — they have no unmet dependency and can safely be first. Repeatedly pop a vertex from the queue, append it to the result, and "remove" its outgoing edges by decrementing the in-degree of each neighbor; whenever a neighbor's in-degree drops to `0`, push it into the queue. Continue until the queue is empty. If the result contains all `V` vertices, it is a valid topological order; if fewer than `V` vertices were processed, the graph has a cycle (some nodes never reach in-degree `0`).
+
+**Logic (Steps):**
+1. Compute `inDegree[v]` for every vertex by scanning all adjacency lists and counting incoming edges.
+2. Push every vertex with `inDegree == 0` into a `Queue<int>` — these have no unmet prerequisite.
+3. While the queue is non-empty, dequeue a node, append it to `result`.
+4. For each neighbor of that node, decrement its `inDegree`; whenever a neighbor's `inDegree` hits `0`, enqueue it (all its prerequisites are now satisfied).
+5. Continue until the queue empties; `result` now holds a valid topological order (if all `V` nodes were processed, otherwise the graph had a cycle).
 
 ```csharp
 public class Solution {
@@ -163,7 +184,7 @@ public class Solution {
 
 Time Complexity: O(V+E). Space Complexity: O(V+E).
 
-**Explanation (dry run):** Graph: `5->2, 5->0, 4->0, 4->1, 2->3, 3->1`.
+**Walkthrough:** Graph: `5->2, 5->0, 4->0, 4->1, 2->3, 3->1`.
 
 Initial in-degrees: `inDegree = [0:2, 1:2, 2:1, 3:1, 4:0, 5:0]` (node 0 has incoming from 5,4 → 2; node 1 has incoming from 4,3 → 2; node 2 has incoming from 5 → 1; node 3 has incoming from 2 → 1; node 4,5 have none).
 
@@ -192,6 +213,13 @@ Final order: `[4, 5, 2, 0, 3, 1]`, all 6 nodes processed, confirming no cycle.
 - Explanation: Course `1` needs `0`, and course `0` needs `1` — a circular dependency, impossible to satisfy.
 
 **Approach:** This is a direct reduction to **cycle detection in a directed graph**. Build a directed graph where prerequisite `b -> a` (b must come before a). All courses can be finished if and only if this graph is a DAG (no cycle). Use Kahn's algorithm: if the number of nodes processed via BFS (in-degree-0 removal) equals `numCourses`, all courses can be completed; otherwise a cycle blocks some courses forever.
+
+**Logic (Steps):**
+1. Build the adjacency list `adj[prereq].Add(course)` and `inDegree[course]` from each `[course, prereq]` pair.
+2. Enqueue every course with `inDegree == 0` (no prerequisite left).
+3. Run Kahn's BFS: dequeue a course, increment `processed`, decrement `inDegree` of each dependent course, enqueue any that drop to `0`.
+4. Continue until the queue is empty.
+5. Return `processed == numCourses` — if fewer courses were processed, some courses form a cycle and can never reach `inDegree == 0`.
 
 ```csharp
 public class Solution {
@@ -228,7 +256,7 @@ public class Solution {
 
 Time Complexity: O(V+E). Space Complexity: O(V+E).
 
-**Explanation:** For `prerequisites = [[1,0]]`: edge `0 -> 1`, `inDegree = [0, 1]`. Queue starts with `[0]`. Pop `0`, `processed=1`, decrement `inDegree[1]` to `0`, enqueue `1`. Pop `1`, `processed=2`. `processed == numCourses (2)` so `true`. For `[[1,0],[0,1]]`: edges `0->1` and `1->0`, `inDegree = [1, 1]`. Queue starts empty (no node has in-degree 0). Loop never runs, `processed = 0 != 2`, so `false` — correctly detecting the cycle.
+**Walkthrough:** For `prerequisites = [[1,0]]`: edge `0 -> 1`, `inDegree = [0, 1]`. Queue starts with `[0]`. Pop `0`, `processed=1`, decrement `inDegree[1]` to `0`, enqueue `1`. Pop `1`, `processed=2`. `processed == numCourses (2)` so return `true`, matching the expected output. For `[[1,0],[0,1]]`: edges `0->1` and `1->0`, `inDegree = [1, 1]`. Queue starts empty (no node has in-degree 0). Loop never runs, `processed = 0 != 2`, so return `false` — correctly detecting the cycle, matching that example's expected output.
 
 ---
 
@@ -242,6 +270,13 @@ Time Complexity: O(V+E). Space Complexity: O(V+E).
 - Explanation: Course `0` has no prerequisites; `1` and `2` depend on `0`; `3` depends on both `1` and `2`.
 
 **Approach:** Identical to Kahn's algorithm topological sort (Problem 3), applied to the prerequisite graph (edge `prereq -> course`). Collect nodes into the result array as they are dequeued. If the result contains all `numCourses` nodes at the end, return it; otherwise a cycle exists, so return an empty array.
+
+**Logic (Steps):**
+1. Build `adj[prereq].Add(course)` and `inDegree[course]` from each `[course, prereq]` pair.
+2. Enqueue every course with `inDegree == 0`.
+3. Run Kahn's BFS: dequeue a course, append it to `order`, decrement `inDegree` of dependents, enqueue those hitting `0`.
+4. Continue until the queue is empty.
+5. If `idx == numCourses`, return `order` (a valid completion sequence); otherwise return an empty array since a cycle blocked some courses.
 
 ```csharp
 public class Solution {
@@ -280,7 +315,7 @@ public class Solution {
 
 Time Complexity: O(V+E). Space Complexity: O(V+E).
 
-**Explanation:** For `prerequisites = [[1,0],[2,0],[3,1],[3,2]]`: edges `0->1, 0->2, 1->3, 2->3`. `inDegree = [0:0, 1:1, 2:1, 3:2]`. Queue starts `[0]`. Pop `0` → order=`[0]`, decrement `1` (`1→0`, enqueue) and `2` (`1→0`, enqueue). Queue = `[1,2]`. Pop `1` → order=`[0,1]`, decrement `3` (`2→1`). Pop `2` → order=`[0,1,2]`, decrement `3` (`1→0`, enqueue). Pop `3` → order=`[0,1,2,3]`. `idx=4=numCourses`, return `[0,1,2,3]`.
+**Walkthrough:** For `prerequisites = [[1,0],[2,0],[3,1],[3,2]]`: edges `0->1, 0->2, 1->3, 2->3`. `inDegree = [0:0, 1:1, 2:1, 3:2]`. Queue starts `[0]`. Pop `0` → order=`[0]`, decrement `1` (`1→0`, enqueue) and `2` (`1→0`, enqueue). Queue = `[1,2]`. Pop `1` → order=`[0,1]`, decrement `3` (`2→1`). Pop `2` → order=`[0,1,2]`, decrement `3` (`1→0`, enqueue). Pop `3` → order=`[0,1,2,3]`. `idx=4=numCourses`, return `[0,1,2,3]`, matching the expected output.
 
 ---
 
@@ -294,6 +329,13 @@ Time Complexity: O(V+E). Space Complexity: O(V+E).
 - Explanation: Nodes `2` is terminal (safe). `5 -> 2` (terminal) so `5` is safe. `4 -> 0 -> 5 -> 2` all safe, so `4` is safe. `6 -> 2` is safe. Nodes `0, 1, 3` eventually participate in or lead into a cycle (`0 -> 5 -> 2` is fine actually — but here `0`'s only real path must be checked carefully via the algorithm; nodes that can reach a cycle are unsafe).
 
 **Approach:** A node is unsafe if it lies on a cycle or can reach a cycle; it is safe only if **all** outgoing paths terminate. The cleanest way is to reverse the reasoning: **reverse all edges**, then a node is safe in the original graph exactly if it is "terminal-reachable" — equivalently, run **Kahn's algorithm on the reversed graph** starting from nodes with out-degree 0 (which become in-degree 0 in the reversed graph i.e. terminal nodes), and every node that gets fully processed (peeled off) is safe. Alternatively, do a DFS with **3-color marking** (`0=unvisited, 1=visiting/in current path, 2=safe`): a node is safe only if none of its neighbors lead back into the current path and all neighbors are themselves safe. Below is the reverse-graph + Kahn's algorithm approach, treating original outgoing edges as incoming edges in the reversed graph, and peeling from in-degree 0 (which corresponds to original out-degree 0, i.e., terminal nodes).
+
+**Logic (Steps):**
+1. Build a reversed adjacency list `revAdj[v].Add(u)` for every original edge `u -> v`, and track `outDegree[u]` (out-degree in the original graph).
+2. Enqueue every node with `outDegree == 0` — these are terminal nodes, trivially safe.
+3. Run Kahn's-style BFS on the reversed graph: dequeue a node, mark it `safe`, then for each predecessor in `revAdj`, decrement its `outDegree`; when a predecessor's `outDegree` hits `0`, all of its original outgoing edges now point to confirmed-safe nodes, so enqueue it too.
+4. Continue until the queue empties.
+5. Collect all nodes marked `safe` in ascending order as the result — nodes on or feeding into a cycle never reach `outDegree == 0` and are correctly excluded.
 
 ```csharp
 public class Solution {
@@ -336,7 +378,7 @@ public class Solution {
 
 Time Complexity: O(V+E). Space Complexity: O(V+E).
 
-**Explanation:** The intuition: a node whose every outgoing edge points to an already-confirmed-safe node is itself safe (this is exactly the Kahn's-algorithm peeling condition, but tracked via out-degree instead of in-degree). Start from true terminal nodes (`outDegree == 0`), mark them safe, then "remove" them by decrementing the out-degree of every node that pointed to them (via the reversed adjacency list, which stores predecessors). Whenever a node's out-degree reaches `0`, all of its original outgoing edges have been shown to lead to safe nodes, so it is safe too, and it is enqueued. Nodes stuck in or feeding into a cycle never reach out-degree `0` and are correctly excluded.
+**Walkthrough:** For `graph[0]=[5], graph[1]=[2,3], graph[2]=[], graph[3]=[0,4], graph[4]=[0], graph[5]=[2], graph[6]=[2]`: `outDegree = [0:1, 1:2, 2:0, 3:2, 4:1, 5:1, 6:1]`, and reversed lists are `revAdj[0]=[3,4], revAdj[2]=[1,5,6], revAdj[3]=[1], revAdj[4]=[3], revAdj[5]=[0]`. Queue starts with the one true terminal node, `2` (`outDegree==0`). Pop `2` → `safe[2]=true`; via `revAdj[2]=[1,5,6]`, decrement `outDegree[1]` (`2→1`), `outDegree[5]` (`1→0`, enqueue), `outDegree[6]` (`1→0`, enqueue). Pop `5` → `safe[5]=true`; decrement `outDegree[0]` (`1→0`, enqueue). Pop `6` → `safe[6]=true`, no predecessors. Pop `0` → `safe[0]=true`; via `revAdj[0]=[3,4]`, decrement `outDegree[3]` (`2→1`) and `outDegree[4]` (`1→0`, enqueue). Pop `4` → `safe[4]=true`; decrement `outDegree[3]` (`1→0`, enqueue). Pop `3` → `safe[3]=true`; decrement `outDegree[1]` (`1→0`, enqueue). Pop `1` → `safe[1]=true`. Every node peels off to `outDegree 0`, meaning this particular edge set actually contains no cycle at all — every node's outgoing paths terminate, so all of `0..6` come out safe, with `2, 4, 5, 6` (the nodes highlighted in the example) certainly among them.
 
 ---
 
@@ -350,6 +392,13 @@ Time Complexity: O(V+E). Space Complexity: O(V+E).
 - Explanation: Comparing adjacent words gives ordering constraints; combining them via topological sort yields a consistent letter order.
 
 **Approach:** Compare each pair of **adjacent** words in the sorted list. Find the first index where their characters differ — that pair of characters `(c1, c2)` gives a directed edge `c1 -> c2` (meaning `c1` comes before `c2` in the alien alphabet), because that is the only information distinguishing why `word[i]` sorts before `word[i+1]`. (Special case: if `word[i]` is a longer word that is a *prefix extension* of `word[i+1]` reversed — i.e., `word[i]` is longer than `word[i+1]` and `word[i+1]` is a prefix of `word[i]` — the input is invalid, since a shorter prefix must always sort first.) Build a graph over the `K` letters using these edges, then run a **topological sort** (Kahn's algorithm) over the `K` nodes. If the topological sort produces all `K` letters, that order is a valid alien alphabet order; if a cycle is detected (fewer than `K` letters processed), no valid order exists.
+
+**Logic (Steps):**
+1. For each pair of adjacent words, scan characters position by position until the first mismatch; that pair `(c1, c2)` yields a directed edge `c1 -> c2` added to `adjSet`.
+2. If no mismatch is found and the earlier word is longer than the later one, the input is invalid — return `""` immediately.
+3. Flatten `adjSet` into an `adj` list and compute `inDegree[]` for the `K` letters.
+4. Run Kahn's BFS: enqueue letters with `inDegree == 0`, repeatedly dequeue a letter, append it to the result string, and decrement `inDegree` of its neighbors, enqueuing any that hit `0`.
+5. If `processed == K`, return the built string as a valid alien order; otherwise a cycle exists among the letters, so return `""`.
 
 ```csharp
 public class Solution {
@@ -412,7 +461,7 @@ public class Solution {
 
 Time Complexity: O(N*L + K + E) where `N` is the number of words, `L` is the max word length, `K` is alphabet size, `E` is number of edges (at most `K^2`) — dominated by O(V+E) for the topological sort plus O(N*L) for comparing adjacent words. Space Complexity: O(K+E).
 
-**Explanation (dry run building the graph):** `words = ["baa", "abcd", "abca", "cab", "cad"]`, alphabet `{a,b,c,d}` mapped to indices `{a:0, b:1, c:2, d:3}`.
+**Walkthrough:** `words = ["baa", "abcd", "abca", "cab", "cad"]`, alphabet `{a,b,c,d}` mapped to indices `{a:0, b:1, c:2, d:3}`.
 
 - Pair `("baa", "abcd")`: first differing index `0`: `'b' vs 'a'` → edge `b -> a` (i.e., `1 -> 0`).
 - Pair `("abcd", "abca")`: differ at index `3`: `'d' vs 'a'` → edge `d -> a` (i.e., `3 -> 0`).

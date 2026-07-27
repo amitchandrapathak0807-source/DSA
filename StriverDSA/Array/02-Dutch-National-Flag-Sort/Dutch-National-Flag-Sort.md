@@ -21,6 +21,11 @@ Given an array `arr` containing only three distinct values — `0`, `1`, and `2`
 **Brute Force Approach:**
 Use a generic comparison-based sorting algorithm (like `Array.Sort` in C#, which is typically an introspective sort — a hybrid of quicksort, heapsort, and insertion sort) to sort the array. Since the array only has 3 distinct values, this works correctly but is wasteful — it does not exploit the fact that there are only 3 possible values, and runs in `O(n log n)` instead of `O(n)`.
 
+**Logic (Steps):**
+1. Call the built-in `Array.Sort` on the array.
+2. Rely on the general-purpose comparison sort to place elements in ascending order.
+3. Since only `0`, `1`, `2` are present, ascending order automatically groups them correctly.
+
 ```csharp
 public static void SortColorsBrute(int[] arr)
 {
@@ -33,10 +38,17 @@ public static void SortColorsBrute(int[] arr)
 **Time Complexity:** `O(n log n)` — this is the time complexity of the underlying comparison sort used by `Array.Sort`.
 **Space Complexity:** `O(log n)` — due to the recursion stack used internally by the introspective sort (auxiliary, not counting output array).
 
+**Walkthrough:** For `arr = [0, 2, 1, 2, 0, 1]`: `Array.Sort` reorders it to ascending order `[0, 0, 1, 1, 2, 2]` ✔ matches Output.
+
 ---
 
 **Better Approach (Counting Sort — Two Passes):**
 Since we know the array contains only `0`, `1`, and `2`, we can count the occurrences of each value in one pass, then overwrite the array in a second pass using those counts.
+
+**Logic (Steps):**
+1. First pass: traverse the array and tally `count0`, `count1`, `count2` for how many times each value appears.
+2. Second pass: starting from `index = 0`, write `count0` zeros, then `count1` ones, then `count2` twos back into the array.
+3. Return — the array is now grouped by value.
 
 ```csharp
 public static void SortColorsCounting(int[] arr)
@@ -63,6 +75,8 @@ public static void SortColorsCounting(int[] arr)
 **Time Complexity:** `O(n) + O(n) = O(n)` — one pass to count, one pass to overwrite. Although this is linear, it requires **two passes** over the array, whereas the optimized approach below achieves the same result in a **single pass**.
 **Space Complexity:** `O(1)` — only three counter variables are used, no extra array.
 
+**Walkthrough:** For `arr = [0, 2, 1, 2, 0, 1]`: pass 1 tallies `count0=2, count1=2, count2=2`. Pass 2 writes `0,0` then `1,1` then `2,2` → `[0,0,1,1,2,2]` ✔ matches Output.
+
 ---
 
 **Optimized Approach (Dutch National Flag Algorithm — Single Pass, Three Pointers):**
@@ -71,6 +85,14 @@ Use three pointers — `low`, `mid`, and `high` — to partition the array into 
 - `[low, mid)` → all `1`s
 - `[mid, high]` → unprocessed / unknown elements
 - `(high, n-1]` → all `2`s
+
+**Logic (Steps):**
+1. Initialize `low = 0`, `mid = 0`, `high = n - 1`.
+2. While `mid <= high`, inspect `arr[mid]`.
+3. If `arr[mid] == 0`, swap it with `arr[low]`, then advance both `low` and `mid`.
+4. If `arr[mid] == 1`, it's already correctly placed — just advance `mid`.
+5. If `arr[mid] == 2`, swap it with `arr[high]` and decrement `high` (without advancing `mid`, since the swapped-in value is unverified).
+6. Stop when `mid` crosses `high` — the array is now partitioned into `0`s, `1`s, `2`s.
 
 ```csharp
 public static void SortColors(int[] arr)
@@ -106,9 +128,7 @@ public static void SortColors(int[] arr)
 **Time Complexity:** `O(n)` — each element is visited by `mid` at most once, and the total work done by `low`/`mid`/`high` combined is bounded by `n`, so the array is sorted in a single linear pass.
 **Space Complexity:** `O(1)` — sorting is done in-place using only three integer pointers, no auxiliary array.
 
----
-
-**Explanation:**
+**Walkthrough:**
 
 The algorithm maintains a loop invariant over four regions of the array at all times, using three pointers `low`, `mid`, and `high`:
 

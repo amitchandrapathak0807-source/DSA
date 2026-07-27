@@ -77,6 +77,12 @@ A **Priority Queue** is an abstract data type where each element has a priority,
 **Approach:**
 `Insert` appends the new element at the end of the internal array (preserving completeness) and then runs **heapify-up** to restore the heap property against its ancestors. `Peek` simply returns `array[0]` in `O(1)` since the root is always the min (or max). `ExtractMin`/`ExtractMax` saves `array[0]` to return, moves the last element to index `0`, shrinks the array by one, and runs **heapify-down** from the root to restore the heap property.
 
+**Logic (Steps):** (min-heap: smallest at root)
+1. `Insert(value)`: append `value` to the end of `heap`, then call `HeapifyUp` from the last index — repeatedly compare the node with its parent (`heap[Parent(i)] > heap[i]`) and swap while the parent is larger, moving `i` up to `Parent(i)` each time.
+2. `Peek()`: return `heap[0]` directly, `O(1)`.
+3. `ExtractMin()`: save `heap[0]` as `min`, move the last element into index `0`, remove the trailing slot, then call `HeapifyDown(0)` if the heap is non-empty.
+4. `HeapifyDown(i)`: find the smallest among `i`, `Left(i)`, `Right(i)`; if a child is smaller, swap it into `i` and recurse/loop into the child's position; stop when `i` is already the smallest.
+
 ```csharp
 using System;
 using System.Collections.Generic;
@@ -150,7 +156,7 @@ public class PriorityQueueMinHeap
 
 Time Complexity: `Insert` is `O(log n)` (heapify-up traverses at most tree height), `ExtractMin` is `O(log n)` (heapify-down traverses at most tree height), `Peek` is `O(1)`. Space Complexity: `O(n)` to store the `n` elements.
 
-**Explanation:**
+**Walkthrough:**
 Dry run of `Insert(5), Insert(3), Insert(8), Insert(1)`:
 - `Insert(5)`: heap = `[5]`. No parent, nothing to bubble.
 - `Insert(3)`: heap = `[5, 3]`. `3` is at index 1, parent index `0` = `5`. Since `5 > 3`, swap → heap = `[3, 5]`.
@@ -177,6 +183,13 @@ Implement both a **Min Heap** and a **Max Heap** from scratch using only a plain
 
 **Approach:**
 Both heaps share the same array-based skeleton (`Parent = (i-1)/2`, `Left = 2i+1`, `Right = 2i+2`); only the comparison direction differs (`<` for min-heap, `>` for max-heap). `BuildHeap(arr)` copies the input array and calls `HeapifyDown` starting from the **last non-leaf node** (`index = n/2 - 1`) down to index `0`, in reverse order — this bottom-up construction is what achieves `O(n)` instead of `O(n log n)`.
+
+**Logic (Steps):**
+1. Copy the input array into the internal `heap` list (constructor overload).
+2. `BuildHeap()`: starting at the last non-leaf index `heap.Count/2 - 1`, walk backward to index `0`, calling `HeapifyDown(i)` at each — this fixes each subtree bottom-up so children are already valid heaps by the time their parent is processed.
+3. `Insert(value)`: append to the end, then bubble it up while it violates order with its parent (`<` for min-heap comparisons, `>` for max-heap).
+4. `ExtractMin`/`ExtractMax`: save the root, move the last element to the root, remove the trailing slot, and `HeapifyDown(0)` to restore order.
+5. `HeapifyDown(i)`: pick the min-heap's smallest (or max-heap's largest) among `i` and its two children, swap it into `i` if different, and repeat from the new position until no swap is needed.
 
 ```csharp
 using System;
@@ -312,7 +325,7 @@ public class MaxHeap
 
 Time Complexity: `Insert` and `Extract` are `O(log n)` each. `BuildHeap` from an arbitrary array is **`O(n)`**, not `O(n log n)`. Why: `BuildHeap` calls `HeapifyDown` once per internal node, and the cost of `HeapifyDown` at a node is proportional to the **height of the subtree rooted there**, not to the total number of nodes `n`. In a complete binary tree of `n` nodes, there are roughly `n/2` nodes of height `0` (leaves, skipped entirely), `n/4` nodes of height `1`, `n/8` nodes of height `2`, and so on — in general `n / 2^(h+1)` nodes at height `h`. The total work is the sum `Σ (n / 2^(h+1)) * h` for `h = 0` to `log n`, which is `n * Σ h / 2^(h+1)`. The series `Σ h / 2^(h+1)` converges to a constant (`≈ 1`) as `h → ∞`, so the whole sum is bounded by `O(n) * O(1) = O(n)`. Intuitively: most nodes are near the bottom of the tree and only need to sift down a little, so the naive `n * O(log n)` upper bound is very loose. Space Complexity: `O(n)` to store the heap array (`O(1)` extra if built in-place over the given array as done here).
 
-**Explanation:**
+**Walkthrough:**
 Dry run inserting `5, 2, 8` into an empty `MinHeap`:
 - `Insert(5)`: heap = `[5]`.
 - `Insert(2)`: heap = `[5, 2]`. Index 1's parent (index 0) = `5 > 2` → swap → `[2, 5]`.
@@ -343,6 +356,13 @@ Given an array `arr` of `n` integers, determine whether it represents a valid **
 
 **Approach:**
 No actual heapify is required to *check* — simply iterate over every index `i` from `0` up to the last non-leaf node (`n/2 - 1`) and verify `arr[i] <= arr[left]` and `arr[i] <= arr[right]` whenever those children exist. If any parent-child pair violates this, the array is not a valid min-heap. This directly mirrors the condition that `HeapifyDown` would otherwise need to fix.
+
+**Logic (Steps):**
+1. Loop `i` from `0` to `n/2 - 1` (only internal/non-leaf nodes can violate the property).
+2. Compute `left = 2*i + 1` and `right = 2*i + 2`.
+3. If `left < n` and `arr[i] > arr[left]`, the min-heap property is violated — return `false`.
+4. If `right < n` and `arr[i] > arr[right]`, likewise return `false`.
+5. If the loop completes without finding a violation, return `true`.
 
 ```csharp
 using System;
@@ -377,7 +397,7 @@ public class MinHeapValidator
 
 Time Complexity: `O(n)` — each internal node (`n/2` of them) is checked in `O(1)` against its up to two children, a single linear pass, no recursion or heapify needed. Space Complexity: `O(1)` extra space (only loop variables), the check is done in-place on the given array.
 
-**Explanation:**
+**Walkthrough:**
 Dry run on `arr = [3, 5, 9, 6, 8, 20, 10, 12, 18, 9]` (`n = 10`, loop `i` from `0` to `4`):
 - `i = 0`, value `3`: `left = 1` → `arr[1] = 5`, `3 <= 5` OK. `right = 2` → `arr[2] = 9`, `3 <= 9` OK.
 - `i = 1`, value `5`: `left = 3` → `arr[3] = 6`, `5 <= 6` OK. `right = 4` → `arr[4] = 8`, `5 <= 8` OK.
@@ -401,6 +421,13 @@ Given an array that represents a valid **Min-Heap**, convert it **in-place** int
 
 **Approach:**
 Ignore the fact that the array currently satisfies the min-heap property — that ordering is irrelevant once we switch comparison direction. Apply the same bottom-up **build-heap** technique from Problem 2, but using **max-heapify-down** (largest child wins) instead of min-heapify-down, starting from the last non-leaf node (`n/2 - 1`) down to the root (`0`). Because every subtree below the current node has already been fixed into a valid max-heap by the time we process the current node (bottom-up order), a single pass of `n/2` heapify-down calls is sufficient — this is exactly the `O(n)` build-heap proof from Problem 2, now reused for min-to-max conversion.
+
+**Logic (Steps):**
+1. Loop `i` from the last non-leaf index `n/2 - 1` down to `0`.
+2. At each `i`, call `MaxHeapifyDown(arr, n, i)`: find the largest among `arr[i]`, `arr[left]`, `arr[right]`.
+3. If a child is larger than `arr[i]`, swap it into position `i`, then continue sifting down from the child's old index.
+4. Stop sifting when `i` is already the largest among itself and its children.
+5. After all internal nodes are processed bottom-up, `arr` is rearranged in-place into a valid max-heap.
 
 ```csharp
 using System;
@@ -444,7 +471,7 @@ public class MinHeapToMaxHeap
 
 Time Complexity: `O(n)` — identical build-heap argument as Problem 2: the sum of subtree heights across all internal nodes of a complete binary tree with `n` nodes is bounded by `O(n)`, since the number of nodes at height `h` shrinks geometrically (`n / 2^(h+1)`) while the per-node work only grows linearly with `h`; the resulting series `Σ h * n / 2^(h+1)` converges to `O(n)`. Space Complexity: `O(1)` extra space — the conversion mutates the input array in-place, only a constant number of index/temp variables are used.
 
-**Explanation:**
+**Walkthrough:**
 Dry run converting `arr = [3, 5, 9, 6, 8, 20, 10, 12, 18, 9]` (`n = 10`) to a max-heap, processing internal nodes from `i = 4` down to `i = 0`, using max-heapify-down:
 
 - `i = 4`, value `8`: left child index `9` = `9` (no right child, index `10` out of bounds). `9 > 8` → swap → `[3, 5, 9, 6, 9, 20, 10, 12, 18, 8]`. Index `9` is a leaf, stop.

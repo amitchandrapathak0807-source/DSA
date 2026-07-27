@@ -23,6 +23,13 @@ Given an `n x m` binary matrix containing only `0`s and `1`s, return a matrix of
 **Brute Force Approach:**
 For every cell, run a BFS/DFS to find the nearest `0`. This means starting a fresh BFS from each of the `n*m` cells, each BFS potentially visiting all `n*m` cells, giving `O((n*m)^2)` time.
 
+**Logic (Steps):**
+1. Loop over every cell `(i,j)`; if it's already `0`, its distance is `0`.
+2. Otherwise, run a fresh BFS from `(i,j)` using its own `Queue<(r,c,dist)>` and its own `visited` array.
+3. Expand outward one ring at a time (up/down/left/right); the first `0` cell dequeued gives the shortest distance for `(i,j)`.
+4. Store that distance in `result[i,j]` and move to the next cell, discarding this BFS's state.
+5. Repeat for all `n*m` cells — each triggers its own independent traversal.
+
 ```csharp
 public class Solution 
 {
@@ -87,6 +94,13 @@ Space Complexity: `O(n*m)` for the visited array and queue used per BFS call.
 **Optimized Approach:**
 Instead of searching outward from every `1`, search outward from every `0` simultaneously — a **multi-source BFS**. Push all `0` cells into the queue first (distance `0`), mark them visited, then do a standard BFS. Because all sources start at the same "time," the first time a cell is reached is guaranteed to be its shortest distance to *any* `0`.
 
+**Logic (Steps):**
+1. Scan the whole grid once: enqueue every `0` cell as a BFS source with `dist = 0`, marking each visited.
+2. Run one shared BFS from all sources simultaneously using a single `Queue<(r,c)>`.
+3. Dequeue a cell, and for each of its 4-directional unvisited neighbors, set `dist[neighbor] = dist[current] + 1`, mark it visited, and enqueue it.
+4. Because every source starts at the same "time," each cell's first visit is guaranteed to be its true shortest distance to the nearest `0`.
+5. Continue until the queue is empty, then return the filled `dist` grid.
+
 ```csharp
 public class Solution 
 {
@@ -139,7 +153,7 @@ public class Solution
 Time Complexity: `O(n*m)` — every cell is enqueued and dequeued exactly once, and each dequeue does O(1) work (4 neighbor checks).
 Space Complexity: `O(n*m)` for the `visited`, `dist` arrays and the BFS queue.
 
-**Explanation:**
+**Walkthrough:**
 Dry run on:
 ```
 0 1 1
@@ -193,6 +207,13 @@ Given an `m x n` matrix containing `'X'` and `'O'`, capture (flip to `'X'`) all 
 
 **Brute Force Approach:**
 For every internal `'O'` cell, run a BFS/DFS to check if that region can reach the boundary. If it cannot, flip the whole region. This repeats work because cells belonging to the same region get re-explored, and in the worst case each of the `O(n*m)` cells triggers a traversal of size `O(n*m)`, giving `O((n*m)^2)`.
+
+**Logic (Steps):**
+1. Scan every cell; whenever an `'O'` is found, BFS its entire connected region, collecting cells and checking if any cell touches row/column boundary (`touchesBoundary`).
+2. If the region never touches the boundary, flip every collected cell to `'X'`.
+3. If it does touch the boundary, temporarily mark the region's cells as `'B'` so this region isn't reprocessed by the outer scan.
+4. Continue scanning the rest of the grid, repeating BFS for each new unvisited `'O'`.
+5. After the full scan, restore every `'B'` back to `'O'`.
 
 ```csharp
 public class Solution 
@@ -263,6 +284,13 @@ Space Complexity: `O(n*m)` for visited array, region list, and queue.
 **Optimized Approach:**
 Only the `'O'`s connected to the border can possibly survive. So run BFS/DFS starting from every border `'O'` cell exactly once, marking all reachable `'O'`s as "safe" (e.g., temporarily change them to `'#'`/`'S'`). After that single multi-source traversal, scan the whole grid: any remaining `'O'` (never marked safe) gets flipped to `'X'`, and every safe-marked cell gets restored back to `'O'`.
 
+**Logic (Steps):**
+1. Scan the border of the grid; enqueue every `'O'` found there as a BFS source and mark it `'#'` (safe) immediately.
+2. Run one multi-source BFS: dequeue a cell, check its 4-directional neighbors, and for any neighbor still `'O'`, mark it `'#'` and enqueue it.
+3. Continue until the queue is empty — every `'O'` reachable from the border is now `'#'`.
+4. Do a final single pass over the grid: any cell still `'O'` (never reached from the border) is flipped to `'X'`.
+5. Any cell marked `'#'` is restored back to `'O'`.
+
 ```csharp
 public class Solution 
 {
@@ -322,8 +350,8 @@ public class Solution
 Time Complexity: `O(n*m)` — each cell is enqueued at most once during BFS, plus one final `O(n*m)` scan.
 Space Complexity: `O(n*m)` for the BFS queue in the worst case (all cells are `'O'`); no separate visited array is needed since the board itself is mutated to mark state.
 
-**Explanation:**
-Dry run island-labeling-style reasoning is covered in problem 6; here is a quick dry run of the border-BFS marking for problem 2 on:
+**Walkthrough:**
+Dry run of the border-BFS marking for this problem on:
 ```
 X O X
 O O X
@@ -363,6 +391,13 @@ Given an `m x n` binary matrix where `1` represents land and `0` represents wate
 
 **Brute Force Approach:**
 For every land cell, run BFS/DFS to see whether its connected component reaches the boundary. As with Surrounded Regions, this re-explores the same components repeatedly, costing `O((n*m)^2)` in the worst case.
+
+**Logic (Steps):**
+1. Scan every cell; when an unprocessed land cell (`1`) is found, BFS its whole component, collecting cells and checking if any lies on the boundary (`touchesBoundary`).
+2. If the component never touches the boundary, add its size to `enclaveCount`.
+3. Mark every cell of the processed component (whether it touched the boundary or not) with a temporary value (`2`) so the outer scan skips it.
+4. Continue scanning until all cells are processed.
+5. Restore the temporary markers back to `1` and return `enclaveCount`.
 
 ```csharp
 public class Solution 
@@ -430,6 +465,13 @@ Space Complexity: `O(n*m)` for visited array and queue/component storage.
 **Optimized Approach:**
 Run a single multi-source BFS/DFS starting from every land cell that lies on the boundary. Mark every land cell reachable from these boundary cells as "escaping" (cannot be an enclave). Then scan the whole grid once: count land cells that were never marked as escaping — those are the enclaves.
 
+**Logic (Steps):**
+1. Scan the border of the grid; enqueue every boundary land cell (`1`) as a BFS source and mark it visited.
+2. Run one multi-source BFS: dequeue a cell, check its 4-directional neighbors, and for any unvisited land neighbor, mark it visited and enqueue it.
+3. Continue until the queue is empty — every land cell reachable from the boundary is now marked visited ("escaping").
+4. Do a final scan over the grid, counting land cells (`grid[i,j]==1`) that were never marked visited.
+5. Return that count as the number of enclaves.
+
 ```csharp
 public class Solution 
 {
@@ -487,7 +529,7 @@ public class Solution
 Time Complexity: `O(n*m)` — each land cell is enqueued and processed at most once, plus one final `O(n*m)` scan.
 Space Complexity: `O(n*m)` for the `visited` array and BFS queue.
 
-**Explanation:**
+**Walkthrough:**
 Dry run on the example grid:
 ```
 0 0 0 0
@@ -520,6 +562,13 @@ Final scan counts land cells (`grid[i,j]==1`) that are **not** visited: `(1,2)`,
 
 **Brute Force Approach:**
 For Word Ladder I, do a BFS from `beginWord`, but at each step scan the *entire* word list to find every word that differs by exactly one character from the current word (instead of generating candidates by mutating each character position). This is `O(N^2 * L)` where `N` is the number of words and `L` is word length, since for each of the `N` words in the BFS we compare against all `N` other words, each comparison costing `O(L)`.
+
+**Logic (Steps):**
+1. Load `wordList` into an `unvisited` set; if `endWord` isn't present, return `0` immediately.
+2. Enqueue `(beginWord, 1)` and run BFS.
+3. For each dequeued `(word, steps)`, if `word == endWord`, return `steps`.
+4. Otherwise, scan the entire `unvisited` set, testing every candidate with `IsOneLetterDiff`; enqueue each one-letter-different match with `steps + 1`, then remove all matched candidates from `unvisited` so they aren't reused.
+5. Repeat until the queue empties (return `0` if `endWord` is never reached).
 
 ```csharp
 public class Solution 
@@ -579,6 +628,13 @@ Instead of comparing against every other word, generate candidates by mutating e
 For **Word Ladder I**, plain BFS layer by layer gives the shortest length directly.
 
 For **Word Ladder II**, BFS level by level while recording, for each word, the set of predecessor words that reach it at the current shortest level (a parent map). Once `endWord` is reached, backtrack from `endWord` through the parent map to reconstruct all shortest paths.
+
+**Logic (Steps):**
+1. **Word Ladder I:** BFS from `beginWord` with `(word, steps)`; for each dequeued word, mutate every position through all 26 letters to generate candidates, checking `O(1)` dictionary membership instead of scanning the whole list.
+2. Enqueue unvisited dictionary matches with `steps + 1`; return `steps` the moment `word == endWord` is dequeued.
+3. **Word Ladder II:** process level by level using `currentLevel`/`nextLevel` sets; for each word in the level, generate mutated candidates and, for every dictionary match, record `word` as a parent of `candidate` in the `parents` map (a candidate may get multiple parents from the same level).
+4. Remove the current level's words from `dict` only *after* the whole level is processed, so sibling words at the same level can still reach each other's candidates; stop once `endWord` is found in a level.
+5. Backtrack from `endWord` through `parents` recursively, building every shortest path back to `beginWord`, reversing each completed path before adding it to the result.
 
 ```csharp
 public class Solution 
@@ -704,7 +760,7 @@ public class Solution
 Time Complexity: Word Ladder I is `O(N * L * 26)` — each of up to `N` words generates `L * 26` candidates, each checked in `O(1)` (amortized `O(L)` for hashing/string build, so more precisely `O(N * L^2 * 26)` including string construction cost). Word Ladder II has the same BFS cost for building `parents`, plus the backtracking reconstruction cost which is proportional to the total number and length of shortest paths found (can be exponential in the worst case, but bounded by the actual output size).
 Space Complexity: `O(N * L)` for the dictionary/visited sets, plus `O(N)` for the `parents` map (each word stores its predecessor list), plus `O(P * L)` for storing `P` output paths of length up to `L` words each.
 
-**Explanation:**
+**Walkthrough:**
 Word Ladder I dry run on `beginWord = "hit"`, `endWord = "cog"`, dict = `{hot, dot, dog, lot, log, cog}`:
 
 Level 1: Queue = `[("hit", 1)]`. Process `"hit"`: mutate each position through a-z. Position 0: `"ait"`..`"zit"` — none in dict. Position 1: `"hot"` found in dict, not visited → enqueue `("hot", 2)`, mark visited. Position 2: `"hia"`..`"hiz"` — none match. Queue = `[("hot", 2)]`.
@@ -740,6 +796,13 @@ Given an `m x n` binary grid where `1` represents land and `0` represents water,
 
 **Brute Force Approach:**
 Find each island's absolute cell coordinates via BFS/DFS, then normalize the shape by subtracting the coordinates of some anchor cell (e.g., the top-left-most cell of that island) from every cell so that islands can be compared regardless of position. Store each normalized shape (a sorted list/set of relative coordinates) into a collection and compare it against every previously found shape using full set equality — an `O(k^2)` comparison across `k` islands where each comparison is `O(size of island)`.
+
+**Logic (Steps):**
+1. Scan every cell; whenever an unvisited land cell is found, DFS-collect all its cells via `CollectIsland` into a list of absolute `(r,c)` coordinates.
+2. Normalize the shape: find the island's minimum row/col (`minR`, `minC`) and subtract them from every cell, then sort the relative coordinates for a canonical order.
+3. Store each normalized shape in `islandShapes`.
+4. After all islands are found, deduplicate by comparing each shape against every previously accepted `distinctShapes` entry with `ShapesEqual`; only add it if no match is found.
+5. Return the count of distinct shapes.
 
 ```csharp
 public class Solution 
@@ -818,6 +881,13 @@ Space Complexity: `O(n*m)` for visited array and storing all island cell lists.
 **Optimized Approach:**
 Instead of storing raw coordinates and comparing shapes pairwise, encode each island's shape as a canonical **string signature** built from the sequence of DFS moves relative to the starting cell (e.g., appending a direction character like `'U'`, `'D'`, `'L'`, `'R'` when moving into a neighbor, and a distinct backtrack marker like `'B'` when returning from recursion so that shape ambiguity is avoided). Insert each signature into a `HashSet<string>` — duplicates collapse automatically, and the final answer is just the set's size. This avoids pairwise comparison entirely.
 
+**Logic (Steps):**
+1. Scan every cell; whenever an unvisited land cell is found, start `Dfs` with a fresh `StringBuilder` and a `'S'` (start) marker.
+2. Inside DFS, append the direction character that led into the current cell (`'U'/'D'/'L'/'R'`, or `'S'` for the start), then recurse into all 4 neighbors in a fixed order.
+3. After all recursive calls for a cell return, append a backtrack marker `'B'` — this disambiguates shapes that would otherwise produce identical strings without it.
+4. Add the finished signature string to a `HashSet<string>` — identical shapes collapse to the same string regardless of grid position.
+5. Return the set's size as the count of distinct island shapes.
+
 ```csharp
 public class Solution 
 {
@@ -864,10 +934,8 @@ public class Solution
 Time Complexity: `O(n*m)` — each cell is visited once by DFS, and each visit does `O(1)` amortized string-append work (StringBuilder append is O(1) amortized).
 Space Complexity: `O(n*m)` for the visited array and for storing all shape signatures in the worst case (every cell is its own island, each signature of length O(1)); more generally `O(total land cells)` for signature storage.
 
-**Explanation:**
-Dry run multi-source BFS is for problem 1; here instead is the shape-signature DFS dry run for problem 5, then the island-labeling dry run for problem 6 below (as requested for problem 6).
-
-Distinct-islands dry run on:
+**Walkthrough:**
+Shape-signature DFS dry run on:
 ```
 1 1 0
 0 1 0
@@ -899,6 +967,13 @@ Given an `n x n` binary grid, you may change **at most one** `0` to a `1`. Retur
 
 **Brute Force Approach:**
 For every `0` cell in the grid, temporarily flip it to `1`, then run a full BFS/DFS over the grid to compute the size of the island that cell now belongs to, then flip it back. Track the maximum size seen. This redoes a full grid traversal for every candidate `0`, giving `O((n*m)^2)`.
+
+**Logic (Steps):**
+1. If the grid has no `0` at all, the answer is trivially `n*m` (entire grid is one island).
+2. Otherwise, for every `0` cell `(i,j)`: temporarily flip it to `1`.
+3. Run a fresh BFS (`BfsSize`) from `(i,j)` over the now-modified grid to compute the size of the island it now belongs to.
+4. Update `best = Math.Max(best, size)`, then flip `(i,j)` back to `0` to restore the grid before trying the next candidate.
+5. After trying every `0` cell, return `best`.
 
 ```csharp
 public class Solution 
@@ -972,6 +1047,13 @@ Space Complexity: `O(n*m)` for the visited array used per BFS call.
 
 **Optimized Approach:**
 First pass: DFS/BFS over the whole grid once, assigning each island a unique integer id (starting at 2, since 0 and 1 are already used) and recording each id's size in a dictionary/array. Second pass: for every `0` cell, look at its (up to 4) neighboring island ids, **deduplicate them using a HashSet** (so an island touched from two different directions by the same `0` cell isn't double-counted), sum the sizes of the unique neighboring islands, add 1 for the flipped cell itself, and track the maximum. If the grid has no `0` cells at all, the answer is simply `n*m`.
+
+**Logic (Steps):**
+1. **Pass 1:** scan the grid; for every unlabeled land cell, run `LabelIsland` DFS to assign it a unique id (starting at 2) and compute its size, storing the size in `islandSize[id]`.
+2. Track `best` as the largest island size found so far (in case no flip is beneficial).
+3. **Pass 2:** for every `0` cell, collect the distinct ids of its up-to-4 neighboring islands into a `HashSet<int>` (deduplication prevents double-counting an island touched from two directions).
+4. Sum `islandSize` over those unique ids, add `1` for the flipped cell itself, and update `best` with this total.
+5. After scanning all `0` cells, return `best` (or `n*m` if the grid had no `0` cells at all).
 
 ```csharp
 public class Solution 
@@ -1055,7 +1137,7 @@ public class Solution
 Time Complexity: `O(n*m)` — Pass 1 labels every land cell exactly once via DFS; Pass 2 examines every cell once and each `0` cell does O(1) work (checking 4 neighbors, deduped via a small HashSet).
 Space Complexity: `O(n*m)` for the `labels` array, plus `O(number of islands)` for the size dictionary, both bounded by `O(n*m)`.
 
-**Explanation:**
+**Walkthrough:**
 Dry run island-labeling on:
 ```
 1 1 0

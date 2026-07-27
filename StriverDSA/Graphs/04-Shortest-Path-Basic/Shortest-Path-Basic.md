@@ -13,6 +13,13 @@ Given an undirected graph with `V` vertices and `E` edges where every edge has w
 **Approach:**
 Because every edge has the same weight, the number of edges on a path is exactly proportional to its length — so the path with the fewest edges is automatically the shortest path. BFS explores the graph in strict layers: it fully visits all nodes at distance `d` before touching any node at distance `d+1`. This means the very first time BFS reaches a node, it has done so via the minimum number of edges possible. We initialize a `dist[]` array to infinity, set `dist[source] = 0`, push the source into a queue, and repeatedly pop a node, look at its unvisited neighbors, set their distance to `current distance + 1`, and push them. No relaxation loop or priority queue is needed because BFS's natural level-order traversal already guarantees shortest distances for unit-weight graphs.
 
+**Logic (Steps):**
+1. Initialize `dist[]` to infinity for all vertices, then set `dist[source] = 0`.
+2. Enqueue `source` into a `Queue<int>`.
+3. While the queue is non-empty, dequeue a node and scan its neighbors.
+4. For each neighbor where `dist[node] + 1 < dist[neighbor]` (i.e., still unvisited/improvable), update `dist[neighbor] = dist[node] + 1` and enqueue it — since all weights are `1`, this first assignment is always optimal.
+5. After the queue empties, convert any leftover `int.MaxValue` entries to `-1` to mark unreachable vertices.
+
 ```csharp
 using System;
 using System.Collections.Generic;
@@ -52,7 +59,7 @@ public class UnitWeightShortestPath
 
 Time Complexity: O(V + E) — every vertex and edge is processed once. Space Complexity: O(V + E) for the adjacency list, distance array, and queue.
 
-**Explanation:**
+**Walkthrough:**
 Dry run on the example graph starting at node `0`:
 - Queue: `[0]`, `dist = [0,∞,∞,∞,∞,∞,∞,∞,∞]`
 - Pop `0` → neighbors `1, 3` get `dist = 1`. Queue: `[1, 3]`
@@ -76,6 +83,13 @@ Given a weighted DAG (edges can have any weight, including negative), find the s
 
 **Approach:**
 In a DAG there are no cycles, so we can linearly order all vertices such that every edge goes from an earlier vertex to a later one (topological order). If we process vertices strictly in this order and relax all outgoing edges of each vertex as we visit it, then by the time we reach any vertex `v`, every vertex that could contribute to `v`'s shortest distance (i.e., every predecessor) has already been fully processed and finalized. This works correctly even with negative edge weights, because there is no cycle where a node could be revisited and improved after being finalized — unlike Dijkstra's, negative weights cannot cause incorrect greedy choices here. We get the topological order via DFS (pushing nodes to a stack on finish) or Kahn's BFS algorithm, then do a single relaxation pass.
+
+**Logic (Steps):**
+1. Compute a topological order of the DAG via DFS: recurse into each unvisited neighbor first, then push the current node onto a `Stack<int>` in post-order.
+2. Initialize `dist[]` to infinity, set `dist[source] = 0`.
+3. Pop nodes off the stack one by one (this yields topological order); skip any node whose `dist` is still infinity (unreachable).
+4. For each popped node, relax all its outgoing edges: if `dist[node] + weight < dist[to]`, update `dist[to]`.
+5. Because nodes are processed strictly in topological order, every predecessor of a node is fully finalized before that node is relaxed, so a single linear pass suffices (even with negative weights, since there are no cycles to revisit).
 
 ```csharp
 using System;
@@ -127,15 +141,18 @@ public class DagShortestPath
 
 Time Complexity: O(V + E) for topological sort plus O(V + E) for relaxation = O(V + E) overall. Space Complexity: O(V + E) for adjacency list, stack, and visited/distance arrays.
 
-**Explanation:**
+**Walkthrough:**
 Dry run on the example: adjacency list — `0: [(1,2),(4,1)]`, `1: [(2,3)]`, `2: [(3,6)]`, `4: [(5,4)]`, `5: [(3,1)]`.
-- DFS from `0` produces a topological order (top to bottom when popping the stack), e.g.: `0, 1, 2, 4, 5, 3` (one valid ordering respecting all edge directions).
+- DFS from `0` visits `1` first (post-order pushes `2` then `3` then `1`... actually recursing `0→1→2→3` pushes `3, 2, 1` onto the stack), then backtracks and visits `4→5`, pushing `5, 4`, then finally pushes `0`. Popping the stack top-to-bottom gives topological order: `0, 4, 5, 1, 2, 3`.
 - Initialize `dist = [0, ∞, ∞, ∞, ∞, ∞]`.
 - Pop `0`: relax `1` → `dist[1] = 0+2 = 2`; relax `4` → `dist[4] = 0+1 = 1`. `dist = [0,2,∞,∞,1,∞]`
-- Pop `1`: relax `2` → `dist[2] = 2+3 = 5`. `dist = [0,2,5,∞,1,∞]`
-- Pop `2`: relax `3` → `dist[3] = 5+6 = 11`. `dist = [0,2,5,11,1,∞]`
-- Pop `4`: relax `5` → `dist[5] = 1+4 = 5`. `dist = [0,2,5,11,1,5]`
-- Pop `5`: relax `3` → candidate `5+1=6 < 11`, so `dist[3] = 6`... continuing this logic with the exact topological order that places `5` before `2`'s relaxation of `3` yields the finalized answer `dist[3] = 3` reported above once the true DFS-finish order (`0,4,5,1,2,3` or similar) is used — the essential takeaway is that each node is only relaxed after all its predecessors in topological order have been finalized, guaranteeing correctness in one linear pass.
+- Pop `4`: relax `5` → `dist[5] = 1+4 = 5`. `dist = [0,2,∞,∞,1,5]`
+- Pop `5`: relax `3` → `dist[3] = 5+1 = 6`. `dist = [0,2,∞,6,1,5]`
+- Pop `1`: relax `2` → `dist[2] = 2+3 = 5`. `dist = [0,2,5,6,1,5]`
+- Pop `2`: relax `3` → candidate `5+6=11`, not less than current `6`, no update. `dist = [0,2,5,6,1,5]`
+- Pop `3`: no outgoing edges.
+
+Final distances: `[0, 2, 5, 6, 1, 5]`. Because nodes are processed strictly in topological order, `5` (and therefore `3` via `5`) gets finalized before `2` ever tries to relax `3` through the longer `0→1→2→3` path, so the single-pass relaxation correctly picks up the shorter `0→4→5→3` route into `dist[3]` without needing to revisit any node.
 
 ## 3. Dijkstra's Algorithm (Shortest Path in a Weighted Graph with Non-negative Weights) Using a Priority Queue
 
@@ -149,6 +166,13 @@ Given a weighted, undirected (or directed) graph with non-negative edge weights,
 
 **Approach:**
 Dijkstra's algorithm greedily grows the set of vertices whose shortest distance is finalized. It maintains a min-priority-queue of `(distance, node)` pairs. At each step it extracts the node with the smallest tentative distance — since all edge weights are non-negative, once a node is popped with the smallest distance in the queue, that distance can never be improved later (any other path to it would have to go through a node with an equal or larger distance, adding non-negative weight, which can't be smaller). After popping a node, we "relax" every outgoing edge: for each neighbor, if `dist[node] + weight(node, neighbor) < dist[neighbor]`, we update `dist[neighbor]` and push the new `(distance, neighbor)` pair into the queue. Stale, outdated entries may remain in the queue but are simply skipped when popped if a better distance was already finalized. This greedy-plus-relaxation approach fails with negative weights because a negative edge could later reduce the distance of an already-finalized node.
+
+**Logic (Steps):**
+1. Initialize `dist[]` to infinity, set `dist[source] = 0`, and push `(source, 0)` into a min-`PriorityQueue<int,int>` keyed by distance.
+2. Repeatedly dequeue the `(node, currentDist)` pair with the smallest distance; if `currentDist > dist[node]`, this entry is stale (a better distance was already found), so skip it.
+3. Otherwise, relax every outgoing edge of `node`: compute `newDist = dist[node] + weight`.
+4. If `newDist < dist[to]`, update `dist[to] = newDist` and push `(to, newDist)` into the queue.
+5. Continue until the queue is empty; `dist[]` then holds the shortest distance to every vertex, since non-negative weights guarantee a popped node's distance can never be improved later.
 
 ```csharp
 using System;
@@ -188,7 +212,7 @@ public class DijkstraShortestPath
 
 Time Complexity: O((V + E) log V) — each edge relaxation may push a new entry into the heap, and each heap operation costs O(log V). Space Complexity: O(V + E) for adjacency list, distance array, and priority queue.
 
-**Explanation:**
+**Walkthrough:**
 Dry run on the example graph (adjacency: `0:[(1,4),(2,1)]`, `1:[(0,4),(2,2),(3,1)]`, `2:[(0,1),(1,2),(3,5)]`, `3:[(1,1),(2,5),(4,3)]`, `4:[(3,3)]`), source `0`:
 
 | Step | Pop (node, dist) | PQ before pop | Relaxations | dist[] after |
@@ -214,6 +238,13 @@ Given a weighted graph, a source, and a destination, find not just the shortest 
 
 **Approach:**
 We run the same Dijkstra's algorithm as before, but alongside `dist[]` we maintain a `parent[]` array where `parent[v]` stores the vertex immediately preceding `v` on the current best-known path from the source. Every time we relax an edge and successfully improve `dist[to]`, we also set `parent[to] = node` (the vertex we relaxed from). Initially `parent[i] = i` for all `i` (or `-1`, sentinel for "no parent yet"), and `parent[source] = source`. After the algorithm finishes, we reconstruct the path by starting at the destination and repeatedly jumping to `parent[current]` until we reach the source, collecting vertices along the way, then reversing the collected list to get the path in source-to-destination order.
+
+**Logic (Steps):**
+1. Initialize `dist[]` to infinity and `parent[i] = i` for every vertex (self-loop sentinel), then set `dist[source] = 0`.
+2. Run standard Dijkstra's with a `PriorityQueue<int,int>`: dequeue the smallest-distance node, skip if stale.
+3. When relaxing an edge and improving `dist[to]`, also record `parent[to] = node` (the vertex we relaxed from).
+4. After the queue empties, if `dist[destination]` is still infinity, the destination is unreachable — return `[-1]`.
+5. Otherwise walk backward from `destination` via `parent[]` until reaching a self-loop (`current == parent[current]`, the source), collecting vertices, then reverse the collected list to get the source-to-destination path.
 
 ```csharp
 using System;
@@ -267,7 +298,7 @@ public class DijkstraPrintPath
 
 Time Complexity: O((V + E) log V) for Dijkstra's, plus O(V) for path reconstruction — overall O((V + E) log V). Space Complexity: O(V + E) for adjacency list, plus O(V) for `dist[]`, `parent[]`, and the path list.
 
-**Explanation:**
+**Walkthrough:**
 Reusing the dry run from problem 3, `parent[]` updates alongside each relaxation:
 - Start: `parent = [0,0,0,0,0]` (each node initialized to itself).
 - Pop `(0,0)`: relax `1` → `parent[1] = 0`; relax `2` → `parent[2] = 0`. `parent = [0,0,0,0,0]` (unchanged indices 3,4).
@@ -307,6 +338,13 @@ grid =
 
 **Approach:**
 Treat every open (`0`) cell of the grid as a node in an implicit unit-weight graph, where each cell has up to 4 edges — to its up, down, left, and right neighbors — provided those neighbors are within bounds and also open (not a wall). Because all edges have weight `1`, the same reasoning as problem 1 applies: BFS explores cells in increasing order of step-count from the source, so the first time we reach the destination we have found the shortest path length. We maintain a 2D `dist[][]` array (or a hash set of visited cells) initialized to infinity, set `dist[source] = 0`, and run a standard BFS pushing `(row, col)` pairs, checking bounds, wall status, and visited status before enqueueing.
+
+**Logic (Steps):**
+1. If the source or destination cell is itself a wall, return `-1` immediately.
+2. Initialize a 2D `dist[,]` array to infinity, set `dist[source] = 0`, and enqueue `source` into a `Queue<(r,c)>`.
+3. While the queue is non-empty, dequeue a cell; if it equals `destination`, return its `dist` value immediately (BFS guarantees this is the shortest step count).
+4. Otherwise, check its 4-directional neighbors — for any in-bounds, open (`0`), and improvable neighbor (`dist[r,c] + 1 < dist[neighbor]`), set its distance and enqueue it.
+5. If the queue empties without ever dequeuing the destination, return `-1` (unreachable).
 
 ```csharp
 using System;

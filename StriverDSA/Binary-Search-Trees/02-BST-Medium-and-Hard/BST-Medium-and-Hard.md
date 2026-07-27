@@ -21,6 +21,12 @@ public class TreeNode {
 
 **Brute Force Approach:** Perform an inorder traversal of the tree and store the visited values in a `List<int>`. A BST's inorder traversal must be strictly increasing. After collecting the list, iterate through it and check that every element is strictly greater than the previous one. If any pair violates this, the tree is not a valid BST.
 
+**Logic (Steps):**
+1. Run a recursive inorder traversal (`left, node, right`) collecting every node's value into `inorder`.
+2. After the traversal, iterate `i` from `1` to `inorder.Count - 1`.
+3. If `inorder[i] <= inorder[i-1]` at any point, the sequence isn't strictly increasing, so return `false`.
+4. If the scan completes without violation, return `true`.
+
 ```csharp
 public class SolutionBrute {
     public bool IsValidBST(TreeNode root) {
@@ -47,7 +53,17 @@ public class SolutionBrute {
 Time Complexity: `O(n)` to traverse all nodes plus `O(n)` to scan the list, overall `O(n)`.
 Space Complexity: `O(n)` for the list storing all node values, plus `O(h)` recursion stack (h = height).
 
+**Walkthrough:** On `root = [5, 1, 4, null, null, 3, 6]`: inorder traversal visits `1, 5, 3, 4, 6` (left subtree `1`, root `5`, then `4`'s left `3`, `4` itself, `4`'s right `6`). Scanning: `5 > 1` ok, but `3 <= 5` → violation found at that pair, return `false`, matching the expected output.
+
+---
+
 **Optimized Approach:** Instead of materializing the entire inorder sequence, perform a single recursive DFS that carries a valid `(min, max)` range for each node. The root can be any value, so its range is `(-infinity, +infinity)`. When recursing into the left child, tighten the upper bound to the current node's value; when recursing into the right child, tighten the lower bound to the current node's value. A node is valid only if its value lies strictly within its inherited `(min, max)` range. This propagates ancestor constraints down through every level, so a node several levels deep is still checked against all of its ancestors, not just its immediate parent.
+
+**Logic (Steps):**
+1. Call `Validate(root, long.MinValue, long.MaxValue)` — the root can hold any value.
+2. In `Validate`, if `node == null`, this branch is trivially valid, return `true`.
+3. If `node.val <= min || node.val >= max`, the node violates an inherited ancestor bound, return `false`.
+4. Otherwise recurse left with a tightened upper bound (`max = node.val`) and recurse right with a tightened lower bound (`min = node.val`); return `true` only if both recursive calls return `true`.
 
 ```csharp
 public class SolutionOptimal {
@@ -71,7 +87,7 @@ public class SolutionOptimal {
 Time Complexity: `O(n)` — each node is visited exactly once.
 Space Complexity: `O(h)` for the recursion stack (no auxiliary list is stored), where `h` is the height of the tree; `O(log n)` for a balanced tree and `O(n)` in the worst-case skewed tree.
 
-**Explanation:** Consider the earlier example: `root = [5, 1, 4, null, null, 3, 6]`, where 5 has left child 1 and right child 4, and 4 has left child 3 and right child 6.
+**Walkthrough:** Consider the earlier example: `root = [5, 1, 4, null, null, 3, 6]`, where 5 has left child 1 and right child 4, and 4 has left child 3 and right child 6.
 
 A naive "compare only with immediate children" check would look at node 4 and its children 3 and 6: `3 < 4` and `6 > 4`, so node 4 alone looks fine, and the check would wrongly report the tree as valid.
 
@@ -93,6 +109,12 @@ The traversal never even needs to reach node 3 to detect the violation — node 
 - Output: `6` — node 6 is the lowest node that has both 2 and 8 in its subtrees (2 is in the left subtree, 8 is in the right subtree).
 
 **Brute Force Approach:** Treat the BST as a generic binary tree (ignore the BST ordering property). Find the root-to-node path for `p` using a recursive DFS, and separately find the root-to-node path for `q`. Store both paths as lists of nodes from root to target. Then walk both path lists simultaneously from the start; the last node at which both paths still agree is the LCA.
+
+**Logic (Steps):**
+1. Use `FindPath` (a DFS that appends nodes to a path list and backtracks with `RemoveAt` when a branch doesn't contain the target) to compute `pathToP` and `pathToQ`.
+2. Walk both path lists together with index `i`, while `pathToP[i] == pathToQ[i]`.
+3. Each time they still match, record that node as the current best `lca` and advance `i`.
+4. Stop when the lists diverge or one runs out; return the last recorded `lca`.
 
 ```csharp
 public class SolutionBrute {
@@ -131,7 +153,18 @@ public class SolutionBrute {
 Time Complexity: `O(n)` in the worst case to find each path (n = number of nodes), so `O(n)` overall.
 Space Complexity: `O(n)` for the two path lists plus `O(h)` recursion stack.
 
+**Walkthrough:** On `root = [6, 2, 8, 0, 4, 7, 9, null, null, 3, 5]`, `p = 2`, `q = 8`: `pathToP = [6, 2]`, `pathToQ = [6, 8]`. Comparing index by index: `i=0`, `pathToP[0]=6 == pathToQ[0]=6` → `lca = 6`, `i=1`. `pathToP[1]=2 != pathToQ[1]=8` → stop. Return `lca = 6`, matching the expected output.
+
+---
+
 **Optimized Approach:** Exploit the BST ordering property directly instead of searching for paths. Starting at the root, compare both `p.val` and `q.val` against the current node's value. If both are smaller, the LCA must lie in the left subtree, so move left. If both are larger, the LCA must lie in the right subtree, so move right. If they diverge (one is smaller or equal and the other is larger or equal, i.e., the current node's value lies between them, or the current node equals one of them), the current node is the split point and therefore the LCA. This can be done iteratively without any extra path storage.
+
+**Logic (Steps):**
+1. Start `current` at the root.
+2. Loop while `current != null`.
+3. If both `p.val` and `q.val` are less than `current.val`, the LCA is in the left subtree — move `current = current.left`.
+4. If both are greater than `current.val`, the LCA is in the right subtree — move `current = current.right`.
+5. Otherwise `p` and `q` diverge at (or one equals) `current` — return `current` immediately as the LCA.
 
 ```csharp
 public class SolutionOptimal {
@@ -157,7 +190,7 @@ public class SolutionOptimal {
 Time Complexity: `O(h)` where `h` is the height of the tree — `O(log n)` for a balanced BST, `O(n)` worst case for a skewed BST.
 Space Complexity: `O(1)` extra space since the walk is iterative and uses no recursion stack or auxiliary storage.
 
-**Explanation:** Using the example BST `[6, 2, 8, 0, 4, 7, 9, null, null, 3, 5]` with `p = 2`, `q = 8`:
+**Walkthrough:** Using the example BST `[6, 2, 8, 0, 4, 7, 9, null, null, 3, 5]` with `p = 2`, `q = 8`:
 - `current = 6`. Is `2 < 6` and `8 < 6`? No (`8` is not `< 6`). Is `2 > 6` and `8 > 6`? No (`2` is not `> 6`). So `p` and `q` diverge at `6` — return `6` as the LCA. This matches the expected output directly in one comparison, illustrating how the BST property collapses the generic path-comparison approach into a simple directional walk.
 
 ---
@@ -171,6 +204,12 @@ Space Complexity: `O(1)` extra space since the walk is iterative and uses no rec
 - Output: A BST rooted at 8, with left subtree containing `{5, 1, 7}` and right subtree containing `{10, 12}` — specifically `root=8`, `root.left=5` (`5.left=1`, `5.right=7`), `root.right=10` (`10.right=12`).
 
 **Brute Force Approach:** Simulate BST insertion. Start with an empty tree and insert each value from `preorder`, in order, using the standard BST insert operation (compare with current node, go left if smaller, go right if larger, insert at the first null spot found). Since preorder visits the root before its subtrees, inserting in preorder order naturally reconstructs the correct BST shape.
+
+**Logic (Steps):**
+1. Start with `root = null`.
+2. For each `val` in `preorder`, call `Insert(root, val)` and reassign the result to `root`.
+3. `Insert` recurses: if the current node is `null`, create and return a new node with `val`; otherwise go left if `val < node.val`, else go right, recursing and reattaching the result.
+4. Return the final `root` after all values are inserted.
 
 ```csharp
 public class SolutionBrute {
@@ -199,7 +238,19 @@ public class SolutionBrute {
 Time Complexity: `O(n^2)` worst case — each insertion can take `O(h)` and the tree can degenerate into a skewed shape (e.g., a sorted preorder input), making `h` up to `n`.
 Space Complexity: `O(h)` recursion stack per insert; `O(n)` overall tree storage (not counted as "extra" space).
 
+**Walkthrough:** On `preorder = [8, 5, 1, 7, 10, 12]`: insert `8` → root. Insert `5`: `5 < 8` → left of 8. Insert `1`: `1 < 8` → left; `1 < 5` → left of 5. Insert `7`: `7 < 8` → left; `7 > 5` → right of 5. Insert `10`: `10 > 8` → right of 8. Insert `12`: `12 > 8` → right; `12 > 10` → right of 10. Final tree: `8` with `left=5` (`5.left=1, 5.right=7`), `right=10` (`10.right=12`), matching the expected output.
+
+---
+
 **Optimized Approach:** Use a bounds-based recursion with a single global index pointer into the `preorder` array (a mutable index, e.g., via a wrapped `int[]` of size 1 or a class field). Each recursive call is given an upper bound representing the maximum value that is still valid for the current subtree (inherited from an ancestor that this subtree is the left child of). As long as `preorder[index]` is less than the current bound, it belongs to the current subtree: consume it as the current node, recursively build its left subtree with the current node's value as the new upper bound, then recursively build its right subtree with the same inherited upper bound. This processes each array element exactly once.
+
+**Logic (Steps):**
+1. Call `Build(preorder, int.MaxValue)` starting with an unbounded upper limit.
+2. In `Build`, if `index` has consumed the whole array, or `preorder[index]` exceeds the inherited `bound`, this subtree is empty — return `null`.
+3. Otherwise consume `preorder[index]` as the current node's value and increment `index`.
+4. Recurse left with the new node's value as the tighter upper bound.
+5. Recurse right with the same inherited `bound` (unchanged, since a right child can be as large as the ancestor allowed).
+6. Return the constructed node.
 
 ```csharp
 public class SolutionOptimal {
@@ -226,7 +277,7 @@ public class SolutionOptimal {
 Time Complexity: `O(n)` — each element of `preorder` is consumed exactly once via the shared `index`.
 Space Complexity: `O(h)` recursion stack only, `O(1)` extra beyond that (no repeated tree traversal/insertion).
 
-**Explanation:** For `preorder = [8, 5, 1, 7, 10, 12]`:
+**Walkthrough:** For `preorder = [8, 5, 1, 7, 10, 12]`:
 - `Build(bound = +inf)`: `preorder[0] = 8 <= +inf`, consume it, `index = 1`. Create node `8`.
   - `node.left = Build(bound = 8)`: `preorder[1] = 5 <= 8`, consume, `index = 2`. Create node `5`.
     - `left = Build(bound = 5)`: `preorder[2] = 1 <= 5`, consume, `index = 3`. Create node `1`.
@@ -251,6 +302,12 @@ Space Complexity: `O(h)` recursion stack only, `O(1)` extra beyond that (no repe
 - Output: Predecessor = `4`, Successor = `7`
 
 **Brute Force Approach:** Perform a full inorder traversal of the tree, storing all values into a `List<int>` (this yields a sorted list since it's a BST). Then linearly scan the sorted list to find the predecessor as the last value strictly less than `key`, and the successor as the first value strictly greater than `key`.
+
+**Logic (Steps):**
+1. Run an inorder traversal into `inorder`, producing a sorted list of values.
+2. Iterate through `inorder`; whenever `val < key`, keep updating `predecessor = val` (the last one seen before `key` wins).
+3. Whenever `val > key` and `successor` hasn't been set yet, set `successor = val` (the first one after `key`).
+4. Return `(predecessor, successor)`.
 
 ```csharp
 public class SolutionBrute {
@@ -284,7 +341,19 @@ public class SolutionBrute {
 Time Complexity: `O(n)` to build the list plus `O(n)` to scan it, overall `O(n)`.
 Space Complexity: `O(n)` for the stored inorder list plus `O(h)` recursion stack.
 
+**Walkthrough:** On `root = [8, 3, 10, 1, 6, null, 14, null, null, 4, 7, 13]` with `key = 6`: the inorder traversal produces `1, 3, 4, 6, 7, 8, 10, 13, 14`. Scanning: predecessor keeps updating to `1`, then `3`, then `4` (all `< 6`); successor is set once to the first value `> 6`, which is `7`. Final result: predecessor `= 4`, successor `= 7`, matching the expected output.
+
+---
+
 **Optimized Approach:** Walk down from the root iteratively, using the BST ordering property to decide direction, and update predecessor/successor pointers as you go — no full list is ever materialized. If `node.val < key`, this node is a candidate predecessor (it's smaller than key, and moving right could find something even closer/larger while still `< key`), so record it and move right. If `node.val > key`, this node is a candidate successor, record it and move left. If `node.val == key`, the predecessor is the maximum of the left subtree and the successor is the minimum of the right subtree (found by walking as far left/right as possible from those subtrees).
+
+**Logic (Steps):**
+1. Start `current` at the root, with `predecessor = null`, `successor = null`.
+2. Loop while `current != null`.
+3. If `current.val == key`: find the predecessor by walking `current.left` rightward as far as possible (if it exists), and the successor by walking `current.right` leftward as far as possible (if it exists), then stop.
+4. If `current.val < key`, this node is a predecessor candidate — record it and move `current = current.right`.
+5. If `current.val > key`, this node is a successor candidate — record it and move `current = current.left`.
+6. Return `(predecessor, successor)`.
 
 ```csharp
 public class SolutionOptimal {
@@ -325,7 +394,7 @@ public class SolutionOptimal {
 Time Complexity: `O(h)` — a single downward walk, `O(log n)` for a balanced BST, `O(n)` worst case for a skewed BST.
 Space Complexity: `O(1)` extra space (purely iterative, no recursion stack, no stored list).
 
-**Explanation:** Using `root = [8, 3, 10, 1, 6, null, 14, null, null, 4, 7, 13]` with `key = 6` (tree: 8 has left 3, right 10; 3 has left 1, right 6; 6 has left 4, right 7; 10 has right 14; 14 has left 13):
+**Walkthrough:** Using `root = [8, 3, 10, 1, 6, null, 14, null, null, 4, 7, 13]` with `key = 6` (tree: 8 has left 3, right 10; 3 has left 1, right 6; 6 has left 4, right 7; 10 has right 14; 14 has left 13):
 - `current = 8`: `8 > 6` → `successor = 8`, move left to `3`.
 - `current = 3`: `3 < 6` → `predecessor = 3`, move right to `6`.
 - `current = 6`: `6 == key`. Left subtree of `6` is node `4` (no children), so `predecessor = 4` (overwriting the earlier candidate `3`, since `4` is closer/larger while still `< 6`). Right subtree of `6` is node `7` (no children), so `successor = 7` (overwriting `8`). Break.
@@ -342,6 +411,12 @@ Space Complexity: `O(1)` extra space (purely iterative, no recursion stack, no s
 - Output: Sorted merged sequence `= [1, 2, 3, 4, 5, 6]`; a balanced BST built from this sequence could be rooted at `4` with left subtree `[1,2,3]` and right subtree `[5,6]`.
 
 **Brute Force Approach:** Perform an inorder traversal of BST1 into `List<int> list1` and BST2 into `List<int> list2` (both come out sorted). Concatenate the two lists into one combined list, then sort the combined list (even though each half is already sorted, this brute-force version just re-sorts everything, ignoring that fact). Optionally, build a balanced BST from the final sorted list by repeatedly picking the middle element as the root.
+
+**Logic (Steps):**
+1. Run inorder traversal on `root1` into `list1` and on `root2` into `list2`.
+2. Concatenate both lists into `combined`.
+3. Sort `combined` with `List.Sort()` (ignoring that both halves were already individually sorted).
+4. Return `combined`.
 
 ```csharp
 public class SolutionBrute {
@@ -371,7 +446,18 @@ public class SolutionBrute {
 Time Complexity: `O(n log n)` dominated by the sort, where `n = n1 + n2` is the total number of nodes across both trees.
 Space Complexity: `O(n)` for the lists.
 
+**Walkthrough:** On BST1 `= [3, 1, 5]` and BST2 `= [4, 2, 6]`: `list1 = [1, 3, 5]`, `list2 = [2, 4, 6]` (both from inorder traversal). `combined = [1, 3, 5, 2, 4, 6]`, then `Sort()` produces `[1, 2, 3, 4, 5, 6]`, matching the expected output.
+
+---
+
 **Optimized Approach:** Since each BST's inorder traversal already produces a sorted list, avoid re-sorting by using the classic merge step from merge sort: given two already-sorted lists, merge them into one sorted list in linear time using two pointers. Then, to get a balanced BST, recursively pick the middle element of the merged sorted array as the root, and recurse on the left and right halves — this guarantees a height-balanced BST.
+
+**Logic (Steps):**
+1. Inorder-traverse `root1` into `list1` and `root2` into `list2` (both already sorted).
+2. Merge them with the two-pointer merge-sort step (`MergeSortedLists`): compare `a[i]` and `b[j]`, append the smaller, advance that pointer, then append any leftovers.
+3. Call `BuildBalancedBST` on the merged array: pick `mid = left + (right-left)/2` as the current root's value.
+4. Recurse to build the left subtree from `[left, mid-1]` and the right subtree from `[mid+1, right]`.
+5. Return the root of the balanced BST (or `null` when `left > right`).
 
 ```csharp
 public class SolutionOptimal {
@@ -422,7 +508,7 @@ public class SolutionOptimal {
 Time Complexity: `O(n1 + n2)` for both inorder traversals and the linear merge, plus `O(n)` to build the balanced BST — overall `O(n)` where `n = n1 + n2`.
 Space Complexity: `O(n)` for the lists (list1, list2, merged) plus `O(log n)` recursion depth for building the balanced tree; strictly better than the brute force's `O(n log n)` time.
 
-**Explanation:** For BST1 `= [3, 1, 5]` (inorder → `[1, 3, 5]`) and BST2 `= [4, 2, 6]` (inorder → `[2, 4, 6]`):
+**Walkthrough:** For BST1 `= [3, 1, 5]` (inorder → `[1, 3, 5]`) and BST2 `= [4, 2, 6]` (inorder → `[2, 4, 6]`):
 - Two-pointer merge: `i=0 (a[0]=1), j=0 (b[0]=2)` → `1 <= 2`, take `1`, `i=1`.
 - `a[1]=3, b[0]=2` → `2 <= 3`, take `2`, `j=1`.
 - `a[1]=3, b[1]=4` → `3 <= 4`, take `3`, `i=2`.
@@ -442,6 +528,12 @@ Space Complexity: `O(n)` for the lists (list1, list2, merged) plus `O(log n)` re
 - Output: `true` — because `2 + 7 = 9` (and also `5 + 4 = 9`).
 
 **Brute Force Approach:** Perform an inorder traversal to collect all node values into a `List<int>`. Then use a nested loop to check every pair of distinct elements to see if any pair sums to `k`.
+
+**Logic (Steps):**
+1. Inorder-traverse into `values`.
+2. For each `i` from `0` to `values.Count - 1`, for each `j` from `i+1` to `values.Count - 1`:
+3. If `values[i] + values[j] == k`, return `true` immediately.
+4. If no pair sums to `k` after the full double loop, return `false`.
 
 ```csharp
 public class SolutionBrute {
@@ -471,7 +563,20 @@ public class SolutionBrute {
 Time Complexity: `O(n^2)` due to the nested pair-checking loop, on top of `O(n)` for the traversal.
 Space Complexity: `O(n)` for the stored values list.
 
+**Walkthrough:** On `root = [5, 3, 6, 2, 4, null, 7]`, `k = 9`: inorder gives `values = [2, 3, 4, 5, 6, 7]`. The nested loop finds `i=0 (val 2)`, `j=4 (val 7)`: `2 + 7 = 9 == k` → return `true` immediately, matching the expected output.
+
+---
+
 **Optimized Approach:** Use two BST iterators acting as two pointers converging from the smallest and largest ends, avoiding any `HashSet` and avoiding materializing a full list. Build a "forward" (next-smallest) iterator using a stack that simulates standard inorder traversal (push all left children, pop, then push right subtree's left spine), and a "backward" (next-largest) iterator using a stack that simulates reverse-inorder traversal (push all right children, pop, then push left subtree's right spine). Initialize `left = BSTIterator.Next()` (smallest value) and `right = BSTIterator.Next()` from the reverse iterator (largest value). While `left < right`: if `left + right == k`, return true; if `left + right < k`, advance the forward iterator (`left = nextSmallest()`); otherwise, advance the backward iterator (`right = nextLargest()`). This mirrors the classic two-pointer technique on a sorted array, but implemented directly on the tree structure using `O(h)` space instead of `O(n)`.
+
+**Logic (Steps):**
+1. Build a `forward` iterator (`reverse=false`, pushes left children, yields ascending values) and a `backward` iterator (`reverse=true`, pushes right children, yields descending values).
+2. Initialize `left = forward.Next()` (smallest value) and `right = backward.Next()` (largest value).
+3. While `left < right`: compute `sum = left + right`.
+4. If `sum == k`, return `true`.
+5. If `sum < k`, the pair is too small — advance the forward iterator: `left = forward.Next()`.
+6. Otherwise the pair is too big — advance the backward iterator: `right = backward.Next()`.
+7. If the pointers cross without finding `k`, return `false`.
 
 ```csharp
 public class BSTIterator {
@@ -534,7 +639,7 @@ public class SolutionOptimal {
 Time Complexity: `O(n)` — in the worst case every node is pushed and popped from each stack exactly once across the whole two-pointer sweep.
 Space Complexity: `O(h)` for each of the two stacks (so `O(h)` overall, since both are bounded by the tree height), which is significantly better than the `O(n)` a `HashSet`-based or full-list-based approach would need.
 
-**Explanation:** Using `root = [5, 3, 6, 2, 4, null, 7]` (5 has left 3, right 6; 3 has left 2, right 4; 6 has right 7), `k = 9`:
+**Walkthrough:** Using `root = [5, 3, 6, 2, 4, null, 7]` (5 has left 3, right 6; 3 has left 2, right 4; 6 has right 7), `k = 9`:
 - `forward` iterator (ascending) initial `Next()` walks the left spine from 5 → 3 → 2, pops `2`, so `left = 2`.
 - `backward` iterator (descending) initial `Next()` walks the right spine from 5 → 6 → 7, pops `7`, so `right = 7`.
 - Loop: `left=2 < right=7`. `sum = 2 + 7 = 9 == k` → return `true` immediately.
@@ -552,6 +657,13 @@ This confirms the expected output. To illustrate the pointer-advancing logic on 
 - Output: After recovery, the tree's values become the valid BST (e.g., swapping the two misplaced values back so the inorder traversal is strictly increasing).
 
 **Brute Force Approach:** Perform an inorder traversal, storing not the values alone but references to the actual `TreeNode` objects into a `List<TreeNode>`. Since a correct BST's inorder traversal is strictly increasing, scan this list to find every position where `list[i].val > list[i+1].val` — these mark violations. There will be either one violation (if the swapped nodes are adjacent in the inorder sequence) or two violations (if they are not adjacent). Identify the two actual misplaced nodes from these violation(s), then swap their `.val` fields.
+
+**Logic (Steps):**
+1. Inorder-traverse into `inorderNodes` (a list of `TreeNode` references, not raw values).
+2. Scan adjacent pairs `inorderNodes[i]`, `inorderNodes[i+1]`; whenever `inorderNodes[i].val > inorderNodes[i+1].val`, a violation is found.
+3. On the first violation, set `first = inorderNodes[i]` (only once, since it's never overwritten afterward).
+4. On every violation (first or second), set `second = inorderNodes[i+1]`.
+5. After scanning, if both `first` and `second` are set, swap their `.val` fields to fix the BST.
 
 ```csharp
 public class SolutionBrute {
@@ -591,7 +703,19 @@ public class SolutionBrute {
 Time Complexity: `O(n)` for the traversal plus `O(n)` for the scan, overall `O(n)`.
 Space Complexity: `O(n)` for storing all node references in the list, plus `O(h)` recursion stack.
 
+**Walkthrough:** Take a BST whose inorder should be `1, 2, 3, 4, 5` but nodes valued `2` and `3` are swapped, so the actual inorder sequence is `1, 3, 2, 4, 5`: scanning adjacent pairs, `1<3` ok, `3>2` → violation, `first = node(3)`, `second = node(2)`; `2<4` ok, `4<5` ok. Only one violation found, so swap `node(3).val` and `node(2).val`, restoring `1, 2, 3, 4, 5`.
+
+---
+
 **Optimized Approach:** Use Morris inorder traversal to visit nodes in sorted order using `O(1)` extra space (no stack, no recursion, no list) by temporarily threading the tree: for a node with a left child, find its inorder predecessor (rightmost node in the left subtree) and make that predecessor's right pointer point back to the current node (a "thread"), then move left; when a threaded link is encountered on return, remove the thread and process the current node before moving right. While threading, track the previous visited node and compare its value with the current node's value, exactly as in the brute-force scan, but without ever storing a full list — just three pointers: `first`, `middle` (used only for adjacent-swap edge cases... commonly two pointers `first`/`second` plus `prev` suffice), and `prev`.
+
+**Logic (Steps):**
+1. Start `current` at the root, with `first = null`, `second = null`, `prev = null`.
+2. If `current.left == null`, "visit" it directly: compare `prev.val > current.val`; on the first such violation set `first = prev`, and on every violation set `second = current`; then set `prev = current` and move `current = current.right`.
+3. Otherwise, find `current`'s inorder predecessor by walking right from `current.left` until hitting `null` or a pointer already threaded back to `current`.
+4. If the predecessor's right pointer is `null`, thread it to `current` (`predecessor.right = current`) and move `current = current.left`.
+5. If the predecessor's right pointer already points to `current`, remove the thread, "visit" `current` (same violation check as step 2), then move `current = current.right`.
+6. After the loop ends (all threads removed), if both `first` and `second` are set, swap their `.val` fields.
 
 ```csharp
 public class SolutionOptimal {
@@ -651,7 +775,7 @@ public class SolutionOptimal {
 Time Complexity: `O(n)` — Morris traversal visits each edge at most twice (once to create the thread, once to remove it), so total work is linear.
 Space Complexity: `O(1)` extra space — no recursion stack, no explicit stack, no list; only a constant number of pointers (`first`, `second`, `prev`, `current`, `predecessor`) are used, and the tree's own null pointers are temporarily repurposed as threads and always restored.
 
-**Explanation:** Take a small BST that should be `[1, 2, 3]` in inorder order but has two non-adjacent... actually let's dry run both the adjacent and non-adjacent cases.
+**Walkthrough:** Dry run both the adjacent and non-adjacent swap cases (the Morris threading visits nodes in the same inorder order as the brute-force scan, just without an explicit list).
 
 *Adjacent-violation example:* Correct inorder should be `1, 2, 3, 4, 5`, but nodes with values `2` and `3` are swapped, giving inorder sequence `1, 3, 2, 4, 5`.
 - `prev=null, current=1`: visit `1`. No `prev` yet. `prev = 1`.
@@ -682,6 +806,13 @@ This dry run shows the key logic distinction: on the first violation, both `firs
 - Output: `3` — the subtree rooted at `5` (containing `5, 1, 8`) is a valid BST of size 3; the whole tree is not a valid BST because `7` (in the right subtree of 15) violates ordering relative to 10, and 15's right child 7 also breaks 15's own BST property... concretely, the largest valid BST subtree here is `{1, 5, 8}` rooted at 5, size 3.
 
 **Brute Force Approach:** For every single node in the tree, treat that node as the root of a candidate subtree and run the standalone "Is Valid BST" check (from Problem 1) on it. If it is valid, compute its size via a simple node count. Track the maximum size found across all nodes. This means every node is both a "root candidate" (triggering a full validity + size check on its subtree) and also gets revisited many times as part of other candidates' subtree checks.
+
+**Logic (Steps):**
+1. Recursively visit every node via `CheckEveryNode`.
+2. At each node, run `IsValidBST` (the same min/max range check from Problem 1) on the subtree rooted there.
+3. If valid, count that subtree's nodes with `CountNodes` and update `maxSize` if it's larger.
+4. Recurse into both children regardless, so every node gets its own independent check.
+5. Return `maxSize` after the whole tree is processed.
 
 ```csharp
 public class SolutionBrute {
@@ -719,7 +850,18 @@ public class SolutionBrute {
 Time Complexity: `O(n^2)` worst case — for each of the `n` nodes, the validity check plus size count can take `O(n)` in the worst case (e.g., a tree that is entirely a valid BST, so every subtree check walks the whole remaining structure).
 Space Complexity: `O(h)` recursion stack for the nested calls (no extra storage beyond the call stack).
 
+**Walkthrough:** On `root = [10, 5, 15, 1, 8, null, 7]`: checking node `5`'s subtree (`{1,5,8}`) via `IsValidBST` passes, size `3` → `maxSize = 3`. Checking node `10`'s whole subtree fails (because `7` under `15` violates `> 10`), so it's skipped. Checking node `15`'s subtree also fails (`7 < 15` violates the right-subtree rule). Leaf checks for `1`, `8`, `7` each pass with size `1`, none beating `3`. Final `maxSize = 3`, matching the expected output.
+
+---
+
 **Optimized Approach:** Perform a single bottom-up post-order DFS that, for each node, returns a combined tuple/result `(isBST, min, max, size)` describing its subtree: whether the subtree rooted here is a valid BST, the minimum and maximum values in that subtree (needed so the parent can check ordering against it), and the size of the largest valid BST found so far anywhere in this subtree (which could be smaller than the whole subtree if the subtree itself isn't a valid BST but contains one). At each node, first recurse into left and right to get their tuples. If both children report `isBST == true`, and the current node's value is strictly greater than the left subtree's max and strictly less than the right subtree's min, then the subtree rooted at the current node is itself a valid BST of size `leftSize + rightSize + 1`; propagate this size upward along with updated min/max. Otherwise, the current node's subtree is not a valid BST as a whole, so propagate `isBST = false` upward and let the size be the max of whatever valid BST sizes were already found in the left and right subtrees (so the answer is never lost even though the parent can no longer participate).
+
+**Logic (Steps):**
+1. Recurse post-order via `Dfs`: a `null` node returns a neutral `NodeInfo(true, +inf, -inf, 0)`.
+2. Get `left = Dfs(node.left)` and `right = Dfs(node.right)`.
+3. If both are valid BSTs and `node.val` is strictly greater than `left.Max` and strictly less than `right.Min`, this subtree is a valid BST: compute `size = left.Size + right.Size + 1`, update the global `largest`, and return `NodeInfo(true, min, max, size)` with tightened bounds.
+4. Otherwise, this subtree is not a valid BST as a whole: return `NodeInfo(false, ..., Math.Max(left.Size, right.Size))`, preserving the best valid-BST size found so far below.
+5. Return `largest` after the DFS completes.
 
 ```csharp
 public class SolutionOptimal {
@@ -771,7 +913,7 @@ public class SolutionOptimal {
 Time Complexity: `O(n)` — each node is visited exactly once in the post-order DFS, and all work per node (comparisons, tuple construction) is `O(1)`.
 Space Complexity: `O(h)` recursion stack; `O(1)` extra space per call beyond that (the `NodeInfo` objects are small and not accumulated into any list).
 
-**Explanation:** Using `root = [10, 5, 15, 1, 8, null, 7]` (10 has left 5, right 15; 5 has left 1, right 8; 15 has right 7, no left):
+**Walkthrough:** Using `root = [10, 5, 15, 1, 8, null, 7]` (10 has left 5, right 15; 5 has left 1, right 8; 15 has right 7, no left):
 
 Bottom-up evaluation:
 - `Dfs(1)`: leaf. `left = Dfs(null) = (true, +inf, -inf, 0)`, `right = Dfs(null) = (true, +inf, -inf, 0)`. Check: `left.IsBST && right.IsBST` true, `1 > left.Max(-inf)` true, `1 < right.Min(+inf)` true → valid BST, `size = 0+0+1 = 1`. `largest = 1`. Returns `(true, min=1, max=1, size=1)`.

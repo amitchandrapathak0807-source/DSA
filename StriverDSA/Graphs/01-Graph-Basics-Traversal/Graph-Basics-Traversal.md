@@ -55,6 +55,14 @@ An adjacency matrix is a `V x V` 2D array (`int[,] adj = new int[V, V]` or `bool
 
 **Approach:** Use a `Queue<int>` and a `bool[] visited` array. Mark the source visited and enqueue it. While the queue is non-empty, dequeue a node, add it to the result, and enqueue all of its unvisited neighbors (marking each visited **at the time it is enqueued**, not when dequeued — this avoids enqueuing the same node multiple times).
 
+**Logic (Steps):**
+1. Create a `bool[] visited` array (all `false`) and a `Queue<int>` to drive the traversal, plus a `result` list.
+2. Mark `source` visited and enqueue it.
+3. Loop while the queue is non-empty: dequeue a node `node`, append it to `result`.
+4. For each `neighbor` in `adj[node]`, if not visited, mark it visited and enqueue it immediately (not when it's later dequeued) to prevent duplicate enqueues.
+5. Repeat until the queue empties — this yields level-order (BFS) order from `source`.
+6. `BFSAllComponents` wraps this in an outer loop over all vertices `0..V-1`, starting a fresh BFS from any still-unvisited vertex, to also cover disconnected graphs.
+
 ```csharp
 public class GraphBFS
 {
@@ -123,7 +131,7 @@ public class GraphBFS
 
 Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Complexity: O(V) or O(n*m) for visited tracking + recursion/queue.
 
-**Explanation:** Starting at `0`, mark it visited and enqueue: `queue = [0]`. Dequeue `0`, add to result (`result = [0]`), look at `adj[0] = [1,2]` — both unvisited, mark and enqueue both: `queue = [1,2]`. Dequeue `1`, `result = [0,1]`, `adj[1] = [0,3,4]` — `0` already visited (skip), `3` and `4` unvisited so mark and enqueue: `queue = [2,3,4]`. Dequeue `2`, `result = [0,1,2]`, `adj[2] = [0]` already visited, nothing added. Dequeue `3`, `result = [0,1,2,3]`, `adj[3]=[1]` visited, nothing added. Dequeue `4`, `result = [0,1,2,3,4]`, done. Final BFS order: `[0,1,2,3,4]`.
+**Walkthrough:** Starting at `0`, mark it visited and enqueue: `queue = [0]`. Dequeue `0`, add to result (`result = [0]`), look at `adj[0] = [1,2]` — both unvisited, mark and enqueue both: `queue = [1,2]`. Dequeue `1`, `result = [0,1]`, `adj[1] = [0,3,4]` — `0` already visited (skip), `3` and `4` unvisited so mark and enqueue: `queue = [2,3,4]`. Dequeue `2`, `result = [0,1,2]`, `adj[2] = [0]` already visited, nothing added. Dequeue `3`, `result = [0,1,2,3]`, `adj[3]=[1]` visited, nothing added. Dequeue `4`, `result = [0,1,2,3,4]`, done. Final BFS order: `[0,1,2,3,4]`, matching the expected output.
 
 ---
 
@@ -138,6 +146,13 @@ Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Com
 - Explanation: From 0 we go deep into 1 first, then deep into 1's first unvisited neighbor 3, backtrack to 1, go to 4, backtrack all the way to 0, then finally visit 2.
 
 **Approach:** Use recursion (the call stack implicitly acts as the "stack") with a `bool[] visited` array — visit the current node, mark it visited, then recursively visit each unvisited neighbor. Alternatively use an explicit `Stack<int>` for an iterative version.
+
+**Logic (Steps):**
+1. Create a `bool[] visited` array and a `result` list.
+2. Call `DFSUtil(source, ...)`: mark `source` visited, append it to `result`.
+3. For each `neighbor` in `adj[node]`, if unvisited, recurse into it immediately — going as deep as possible before returning.
+4. Recursion unwinds (backtracks) naturally when a node has no unvisited neighbors left, and control returns to the caller to try the next neighbor.
+5. `DFSIterative` mimics this with an explicit `Stack<int>`: push `source`, then repeatedly pop a node, and if not yet visited, mark it visited, add to `result`, and push its unvisited neighbors in reverse order (so the first neighbor is processed first, matching recursive order).
 
 ```csharp
 public class GraphDFS
@@ -200,7 +215,7 @@ public class GraphDFS
 
 Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Complexity: O(V) or O(n*m) for visited tracking + recursion/queue.
 
-**Explanation:** Start at `0`, mark visited, `result = [0]`. Its first neighbor is `1` (unvisited) → recurse into `1`, mark visited, `result = [0,1]`. `1`'s first neighbor is `0` (visited, skip), next is `3` (unvisited) → recurse into `3`, mark visited, `result = [0,1,3]`. `3`'s only neighbor is `1` (visited) → backtrack to `1`. `1`'s next neighbor is `4` (unvisited) → recurse into `4`, mark visited, `result = [0,1,3,4]`. `4`'s only neighbor is `1` (visited) → backtrack to `1`, no more neighbors → backtrack to `0`. `0`'s next neighbor is `2` (unvisited) → recurse into `2`, mark visited, `result = [0,1,3,4,2]`. `2`'s only neighbor is `0` (visited) → backtrack, done. Final DFS order: `[0,1,3,4,2]`.
+**Walkthrough:** Start at `0`, mark visited, `result = [0]`. Its first neighbor is `1` (unvisited) → recurse into `1`, mark visited, `result = [0,1]`. `1`'s first neighbor is `0` (visited, skip), next is `3` (unvisited) → recurse into `3`, mark visited, `result = [0,1,3]`. `3`'s only neighbor is `1` (visited) → backtrack to `1`. `1`'s next neighbor is `4` (unvisited) → recurse into `4`, mark visited, `result = [0,1,3,4]`. `4`'s only neighbor is `1` (visited) → backtrack to `1`, no more neighbors → backtrack to `0`. `0`'s next neighbor is `2` (unvisited) → recurse into `2`, mark visited, `result = [0,1,3,4,2]`. `2`'s only neighbor is `0` (visited) → backtrack, done. Final DFS order: `[0,1,3,4,2]`, matching the expected output.
 
 ---
 
@@ -214,6 +229,13 @@ Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Com
 - Explanation: City 0 and City 1 are connected (province 1). City 2 is isolated (province 2). Total = 2 provinces.
 
 **Approach:** This is equivalent to counting connected components. Iterate over every city; if it hasn't been visited yet, it belongs to a new province — increment the count and run a BFS (or DFS) from it to mark every city reachable from it (directly or transitively) as visited, using the matrix row as the adjacency information.
+
+**Logic (Steps):**
+1. Create a `bool[] visited` array of size `n` and a `provinces` counter starting at 0.
+2. Loop `i` from `0` to `n-1`: if city `i` is unvisited, it starts a brand-new province — increment `provinces`.
+3. Run a BFS from `i` using a `Queue<int>`: mark `i` visited, enqueue it, then repeatedly dequeue a node and scan its matrix row `isConnected[node]` for any column `neighbor` where `isConnected[node][neighbor] == 1` and `neighbor` is unvisited — mark and enqueue those.
+4. This BFS marks every city transitively reachable from `i` as visited, so the outer loop will skip them.
+5. After the outer loop finishes, `provinces` holds the total number of connected components.
 
 ```csharp
 public class NumberOfProvinces
@@ -261,7 +283,7 @@ public class NumberOfProvinces
 
 Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Complexity: O(V) or O(n*m) for visited tracking + recursion/queue.
 
-**Explanation:** `n = 3`. `i=0` is unvisited → `provinces = 1`, BFS from 0: enqueue 0, mark visited. Dequeue 0, row `[1,1,0]` → neighbor 1 is connected and unvisited, mark and enqueue: `queue=[1]`. Dequeue 1, row `[1,1,0]` → neighbor 0 already visited, nothing new. Queue empty, BFS ends — cities `{0,1}` visited. `i=1` already visited, skip. `i=2` unvisited → `provinces = 2`, BFS from 2 only marks `{2}`. Final answer: `2` provinces.
+**Walkthrough:** `n = 3`. `i=0` is unvisited → `provinces = 1`, BFS from 0: enqueue 0, mark visited. Dequeue 0, row `[1,1,0]` → neighbor 1 is connected and unvisited, mark and enqueue: `queue=[1]`. Dequeue 1, row `[1,1,0]` → neighbor 0 already visited, nothing new. Queue empty, BFS ends — cities `{0,1}` visited. `i=1` already visited, skip. `i=2` unvisited → `provinces = 2`, BFS from 2 only marks `{2}`. Final answer: `2` provinces, matching the expected output.
 
 ---
 
@@ -283,6 +305,13 @@ grid = [
 - Explanation: The top-left `1`s at (0,0),(0,1),(1,0) form one island (connected). The `1`s at (2,2),(2,3) form a second island. Total = 2 islands.
 
 **Approach:** Scan every cell; whenever an unvisited land cell (`1`) is found, it marks the start of a new island — increment the count and run BFS/DFS from it to visit and mark all connected land cells (checking all 8 neighboring directions) as visited so they aren't recounted.
+
+**Logic (Steps):**
+1. Create a `bool[,] visited` grid of size `m x n` and two direction arrays `dRow`/`dCol` covering all 8 neighbor offsets.
+2. Scan every cell `(r, c)` in row-major order; if `grid[r][c] == 1` and it's unvisited, a new island is found — increment `islands`.
+3. Run BFS from `(r, c)` with a `Queue<(int,int)>`: mark it visited, enqueue it, then repeatedly dequeue a cell and check all 8 neighbors — for any in-bounds neighbor that is land (`1`) and unvisited, mark visited and enqueue.
+4. This BFS floods and marks the entire connected island (8-directionally) so the outer scan skips it later.
+5. Continue scanning until all cells are processed; `islands` holds the final island count.
 
 ```csharp
 public class NumberOfIslands
@@ -341,7 +370,7 @@ public class NumberOfIslands
 
 Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Complexity: O(V) or O(n*m) for visited tracking + recursion/queue.
 
-**Explanation:** Scanning row by row: `(0,0)=1`, unvisited → `islands=1`, BFS marks `(0,0),(0,1),(1,0)` visited (all connected via horizontal/vertical/diagonal adjacency). Continue scan: `(0,2)=0`, `(0,3)=0`, `(1,1)=0`, `(1,2)=0`, `(1,3)=0` skip. `(2,0)=0`, `(2,1)=0` skip. `(2,2)=1`, unvisited → `islands=2`, BFS marks `(2,2),(2,3)` visited. Rest of grid is `0`s or already visited. Final count: `2` islands.
+**Walkthrough:** Scanning row by row: `(0,0)=1`, unvisited → `islands=1`, BFS marks `(0,0),(0,1),(1,0)` visited (all connected via horizontal/vertical/diagonal adjacency). Continue scan: `(0,2)=0`, `(0,3)=0`, `(1,1)=0`, `(1,2)=0`, `(1,3)=0` skip. `(2,0)=0`, `(2,1)=0` skip. `(2,2)=1`, unvisited → `islands=2`, BFS marks `(2,2),(2,3)` visited. Rest of grid is `0`s or already visited. Final count: `2` islands, matching the expected output.
 
 ---
 
@@ -370,6 +399,13 @@ sr = 1, sc = 1, newColor = 2
 - Explanation: Starting color at (1,1) is `1`. All 4-directionally connected pixels with color `1` reachable from (1,1) get changed to `2`. The `0` pixels and the isolated `1` at (2,2) are untouched.
 
 **Approach:** Record the starting pixel's original color. Run BFS (or DFS) from `(sr, sc)`; for every visited pixel whose color equals the original color, change it to `newColor` and enqueue its unvisited same-colored 4-directional neighbors. Guard against the edge case where `newColor == originalColor` (would cause infinite requeueing / no-op needed) by checking before processing, or simply relying on the visited check.
+
+**Logic (Steps):**
+1. Read `originalColor = image[sr][sc]`; if it already equals `newColor`, return the image unchanged (avoids infinite/no-op requeueing).
+2. Create a `bool[,] visited` grid and a `Queue<(int,int)>`. Mark `(sr, sc)` visited, color it `newColor`, and enqueue it.
+3. While the queue is non-empty, dequeue a cell and check its 4-directional neighbors (`dRow`/`dCol` arrays).
+4. For any in-bounds, unvisited neighbor whose color still equals `originalColor`, mark it visited, recolor it to `newColor`, and enqueue it.
+5. Continue until the queue empties — this floods and recolors exactly the region 4-directionally connected to the start that shares the original color.
 
 ```csharp
 public class FloodFill
@@ -417,7 +453,7 @@ public class FloodFill
 
 Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Complexity: O(V) or O(n*m) for visited tracking + recursion/queue.
 
-**Explanation:** `originalColor = image[1][1] = 1`, `newColor = 2`, they differ so proceed. Mark `(1,1)` visited, color it `2`, enqueue: `queue=[(1,1)]`. Dequeue `(1,1)`. Check neighbors: up `(0,1)=1` matches original, color it `2`, mark visited, enqueue. down `(2,1)=0` doesn't match, skip. left `(1,0)=1` matches, color `2`, mark visited, enqueue. right `(1,2)=0` doesn't match, skip. `queue=[(0,1),(1,0)]`. Dequeue `(0,1)`: neighbors `(−1,1)` out of bounds, `(1,1)` visited, `(0,0)=1` matches → color `2`, enqueue, `(0,2)=1` matches → color `2`, enqueue. `queue=[(1,0),(0,0),(0,2)]`. Continue similarly — `(1,0)` neighbor `(2,0)=1` matches → color `2`, enqueue. `(0,0)` and `(0,2)` have no new unvisited matching neighbors. `(2,0)` neighbor `(2,1)=0` skip. Queue empties. Final image has all originally-connected `1`s turned to `2`, while `(2,2)=1` (not reachable, disconnected from the region) stays `1`.
+**Walkthrough:** `originalColor = image[1][1] = 1`, `newColor = 2`, they differ so proceed. Mark `(1,1)` visited, color it `2`, enqueue: `queue=[(1,1)]`. Dequeue `(1,1)`. Check neighbors: up `(0,1)=1` matches original, color it `2`, mark visited, enqueue. down `(2,1)=0` doesn't match, skip. left `(1,0)=1` matches, color `2`, mark visited, enqueue. right `(1,2)=0` doesn't match, skip. `queue=[(0,1),(1,0)]`. Dequeue `(0,1)`: neighbors `(−1,1)` out of bounds, `(1,1)` visited, `(0,0)=1` matches → color `2`, enqueue, `(0,2)=1` matches → color `2`, enqueue. `queue=[(1,0),(0,0),(0,2)]`. Continue similarly — `(1,0)` neighbor `(2,0)=1` matches → color `2`, enqueue. `(0,0)` and `(0,2)` have no new unvisited matching neighbors. `(2,0)` neighbor `(2,1)=0` skip. Queue empties. Final image has all originally-connected `1`s turned to `2`, while `(2,2)=1` (not reachable, disconnected from the region) stays `1` — matching the expected output.
 
 ---
 
@@ -438,6 +474,13 @@ grid = [
 - Explanation: All rotten oranges start rotting their neighbors simultaneously. It takes 4 minutes for the rot to spread to every fresh orange in the grid.
 
 **Approach (Multi-source BFS):** Instead of starting BFS from a single node, push **all initially rotten oranges into the queue at once** (multiple sources) along with a time/level marker, and also count total fresh oranges. Process level by level: for each orange popped, rot its fresh 4-directional neighbors, decrement the fresh count, and enqueue them for the next level. Track elapsed minutes by processing the queue in levels (snapshot the queue size at the start of each level, or store `(row, col, time)` tuples). If fresh count reaches 0, return the elapsed time; if the queue empties while fresh oranges remain, return `-1`.
+
+**Logic (Steps):**
+1. Scan the grid once: enqueue every cell with value `2` (rotten) as `(row, col, 0)` — multi-source seeding — and count all `1` cells into `freshCount`.
+2. While the queue is non-empty, dequeue `(row, col, time)` and update `minutesElapsed = Math.Max(minutesElapsed, time)`.
+3. Check its 4-directional neighbors; for any in-bounds neighbor still fresh (`== 1`), rot it (`= 2`), decrement `freshCount`, and enqueue it as `(newRow, newCol, time + 1)`.
+4. Continue until the queue empties — the `time` field naturally tracks how many minutes have elapsed since the neighbor's infection.
+5. After the loop, if `freshCount == 0` return `minutesElapsed`, otherwise some oranges were unreachable, so return `-1`.
 
 ```csharp
 public class RottenOranges
@@ -497,7 +540,7 @@ public class RottenOranges
 
 Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Complexity: O(V) or O(n*m) for visited tracking + recursion/queue.
 
-**Explanation (multi-source BFS dry run):**
+**Walkthrough:**
 
 Grid:
 ```
@@ -531,6 +574,13 @@ Initial seeding: the only rotten orange is `(0,0)`. `freshCount = 6` (all the `1
 
 - **BFS version:** enqueue `(node, parent)` pairs. For each neighbor of the dequeued node: if unvisited, mark visited and enqueue `(neighbor, node)`. If visited AND neighbor != parent, a cycle is found.
 - **DFS version:** recurse with `(node, parent)`. For each neighbor: if unvisited, recurse with `(neighbor, node)` — if that recursive call finds a cycle, propagate `true`. If neighbor is visited AND neighbor != parent, a cycle is found.
+
+**Logic (Steps):**
+1. Create a `bool[] visited` array and loop over all vertices `0..V-1` to also cover disconnected components — for each unvisited vertex, launch a fresh cycle check.
+2. **BFS version:** enqueue `(node, parent)` pairs starting with `(start, -1)`; for each dequeued node, scan its neighbors — unvisited neighbors get marked and enqueued with the current node as their parent; a visited neighbor that isn't the parent means a cycle (return `true` immediately).
+3. **DFS version:** recurse with `(node, parent)`; mark `node` visited, then for each neighbor — unvisited neighbors get recursed into with `node` as the new parent (propagate `true` if that call finds a cycle); a visited neighbor that isn't the parent means a cycle (return `true`).
+4. In both versions, the parent check is what distinguishes "the edge we just came from" (not a cycle) from "reached via a genuinely different path" (a cycle).
+5. If every component is fully explored without finding such a back-edge, return `false`.
 
 ```csharp
 public class DetectCycleUndirected
@@ -618,7 +668,7 @@ public class DetectCycleUndirected
 
 Time Complexity: O(V+E) for graph traversal, O(n*m) for grid problems. Space Complexity: O(V) or O(n*m) for visited tracking + recursion/queue.
 
-**Explanation (BFS parent-tracking dry run):**
+**Walkthrough:**
 
 Graph: `adj[0]=[1,3]`, `adj[1]=[0,2]`, `adj[2]=[1,3]`, `adj[3]=[2,0]` (cycle `0-1-2-3-0`).
 

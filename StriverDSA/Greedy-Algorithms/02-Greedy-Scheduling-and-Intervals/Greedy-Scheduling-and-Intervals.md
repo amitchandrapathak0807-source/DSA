@@ -13,6 +13,13 @@ Given the start time and end time of `N` meetings, find the maximum number of me
 **Brute Force Approach:**
 Generate all possible subsets of meetings, check which subsets have no overlapping meetings, and return the size of the largest valid subset. This is exponential because there are `2^n` subsets.
 
+**Logic (Steps):**
+1. Recurse through meetings by index, tracking `lastEndTime` (end of the last chosen meeting) and `count`.
+2. At each index, branch into two options: skip the meeting, or take it.
+3. Taking is only valid if `start[index] > lastEndTime` (no overlap); if valid, recurse with `end[index]` as the new `lastEndTime` and `count + 1`.
+4. When `index == n`, update the running `maxCount` with the current `count`.
+5. Return `maxCount` after all branches are explored.
+
 ```csharp
 public class NMeetingsBruteForce
 {
@@ -47,8 +54,17 @@ public class NMeetingsBruteForce
 Time Complexity: O(2^n) — every meeting is either taken or skipped.
 Space Complexity: O(n) — recursion stack depth.
 
+**Walkthrough:** With `start = [1,3,0,5,8,5], end = [2,4,6,7,9,9]`, the recursion explores every skip/take combination. Taking `(1,2)` (index 0) sets `lastEndTime = 2`; from there `(3,4)` is valid (`3 > 2`) giving `lastEndTime = 4`; then `(5,7)` is valid (`5 > 4`) giving `lastEndTime = 7`; then `(8,9)` is valid (`8 > 7`) giving `count = 4`. No other branch produces more than 4 non-overlapping picks, so `maxCount = 4` is returned, matching the expected output.
+
 **Optimized Approach:**
 Sort meetings by their end time. Greedily pick a meeting if its start time is strictly greater than the end time of the last picked meeting. Picking the meeting that finishes earliest always leaves the most room for future meetings.
+
+**Logic (Steps):**
+1. Pair up `start[i]` and `end[i]` into tuples and sort them ascending by `End`.
+2. Always pick the first meeting (earliest end); set `lastEndTime` to its end and `count = 1`.
+3. Scan the remaining sorted meetings; if `meetings[i].Start > lastEndTime`, pick it: increment `count` and update `lastEndTime = meetings[i].End`.
+4. Otherwise skip the meeting since it overlaps the last picked one.
+5. Return `count` after the scan.
 
 ```csharp
 public class NMeetingsOptimal
@@ -83,8 +99,14 @@ public class NMeetingsOptimal
 Time Complexity: O(n log n) for sorting, followed by O(n) for the single greedy pass.
 Space Complexity: O(n) for the array of (start, end) pairs used for sorting.
 
-**Explanation:**
-Sorting by end time is the key insight — a meeting that ends earlier always leaves at least as much free room as one that ends later, so greedily choosing the earliest-finishing available meeting can never be worse than any other choice. This is a classic activity-selection exchange argument: any optimal solution can be transformed to include the earliest-ending meeting without losing count.
+**Walkthrough:** With `start = [1,3,0,5,8,5], end = [2,4,6,7,9,9]`, pairing and sorting by end gives `(1,2), (3,4), (5,7), (0,6), (8,9), (5,9)`. `count = 1`, `lastEndTime = 2` (from `(1,2)`).
+- `(3,4)`: `3 > 2` → pick, `count = 2`, `lastEndTime = 4`.
+- `(5,7)`: `5 > 4` → pick, `count = 3`, `lastEndTime = 7`.
+- `(0,6)`: `0 > 7`? No → skip.
+- `(8,9)`: `8 > 7` → pick, `count = 4`, `lastEndTime = 9`.
+- `(5,9)`: `5 > 9`? No → skip.
+
+Return `count = 4`, matching the expected output. Sorting by end time is the key insight — a meeting that ends earlier always leaves at least as much free room as one that ends later, so greedily choosing the earliest-finishing available meeting can never be worse than any other choice.
 
 ---
 
@@ -100,6 +122,13 @@ Given an array `nums` where `nums[i]` represents the maximum jump length from in
 
 **Brute Force Approach:**
 Try every possible jump length from the current index recursively (backtracking) and check if any path reaches the last index.
+
+**Logic (Steps):**
+1. `CanReach(nums, position)`: if `position >= nums.Length - 1`, the end is reached, return `true`.
+2. Otherwise read `maxJump = nums[position]`.
+3. Try every step length from `maxJump` down to `1`, recursively calling `CanReach(nums, position + step)`.
+4. If any recursive call returns `true`, propagate `true` immediately.
+5. If no step length works, return `false`.
 
 ```csharp
 public class JumpGameBruteForce
@@ -132,8 +161,17 @@ public class JumpGameBruteForce
 Time Complexity: O(2^n) in the worst case — each position branches into multiple recursive calls.
 Space Complexity: O(n) for the recursion stack.
 
+**Walkthrough:** With `nums = [2,3,1,1,4]`, `CanReach(nums, 0)`: `maxJump = 2`, try `step = 2` → `CanReach(nums, 2)`: `maxJump = 1`, try `step = 1` → `CanReach(nums, 3)`: `maxJump = 1`, try `step = 1` → `CanReach(nums, 4)`: `position >= 4` → `true`. This `true` propagates back up through each call, so `CanReach(nums, 0)` returns `true`, matching the expected output.
+
 **Optimized Approach:**
 Traverse the array once, maintaining the farthest index reachable so far. If at any index `i` the farthest reachable index is less than `i`, we're stuck and cannot proceed, so return false. Otherwise, keep extending the farthest reachable index.
+
+**Logic (Steps):**
+1. Initialize `farthest = 0`.
+2. For each index `i`, if `i > farthest`, index `i` is unreachable — return `false`.
+3. Otherwise update `farthest = max(farthest, i + nums[i])`.
+4. If `farthest >= n - 1`, the last index is already reachable — return `true` early.
+5. If the loop completes without early return, return `true`.
 
 ```csharp
 public class JumpGameOptimal
@@ -164,8 +202,11 @@ public class JumpGameOptimal
 Time Complexity: O(n) — single pass through the array.
 Space Complexity: O(1) — only a couple of scalar trackers used.
 
-**Explanation:**
-`farthest` greedily tracks the maximum index reachable using jumps decided so far. Since we only care about whether the last index is reachable (not the specific path), it's always optimal to assume we can use the best jump length seen up to the current index — this greedy relaxation never loses correctness because reachability is monotonic (if index `i` is reachable, everything jumped-to from any reachable index before `i` is also valid).
+**Walkthrough:** With `nums = [2,3,1,1,4]`, `n = 5`, `farthest = 0`.
+- `i=0`: `0 > 0`? No. `farthest = max(0, 0+2) = 2`. `2 >= 4`? No.
+- `i=1`: `1 > 2`? No. `farthest = max(2, 1+3) = 4`. `4 >= 4`? Yes → return `true` immediately.
+
+Result: `true`, matching the expected output.
 
 ---
 
@@ -181,6 +222,13 @@ Given an array `nums` where `nums[i]` represents the maximum jump length from in
 
 **Brute Force Approach:**
 Recursively try every possible jump length from each index and take the minimum number of jumps among all valid paths that reach the end.
+
+**Logic (Steps):**
+1. `MinJumpsFrom(nums, position)`: if `position >= nums.Length - 1`, return `0` (already at the end).
+2. Otherwise read `maxJump = nums[position]`.
+3. For every `step` from `1` to `maxJump`, recursively compute `subResult = MinJumpsFrom(nums, position + step)`.
+4. If `subResult` is a valid (non-infinite) result, update `minJumps = min(minJumps, 1 + subResult)`.
+5. Return the smallest `minJumps` found across all step choices.
 
 ```csharp
 public class JumpGameIIBruteForce
@@ -217,8 +265,17 @@ public class JumpGameIIBruteForce
 Time Complexity: O(2^n) in the worst case due to exponential branching of jump choices.
 Space Complexity: O(n) for the recursion stack.
 
+**Walkthrough:** With `nums = [2,3,1,1,4]`, `MinJumpsFrom(nums, 0)` tries `step=2` → `MinJumpsFrom(nums, 2)`, which tries `step=1` → `MinJumpsFrom(nums, 3)`, which tries `step=1` → `MinJumpsFrom(nums, 4)` returns `0` (at end). So `MinJumpsFrom(3) = 1`, `MinJumpsFrom(2) = 2`. Back at position 0, `step=2` gives `1 + 2 = 3`, but trying `step=1` → `MinJumpsFrom(nums, 1)` can jump `step=3` straight to index 4, giving `MinJumpsFrom(1) = 1`, so `step=1` path gives `1 + 1 = 2`. The minimum across all branches is `2`, matching the expected output.
+
 **Optimized Approach:**
 Use a greedy BFS-like sweep with two pointers: `currentJumpEnd` marks the boundary of the current jump's range, and `farthest` tracks the farthest index reachable using one more jump. Whenever we reach `currentJumpEnd`, we are forced to take another jump, so we increment the jump count and move the boundary to `farthest`.
+
+**Logic (Steps):**
+1. Initialize `jumps = 0`, `currentJumpEnd = 0`, `farthest = 0`.
+2. For each index `i` from `0` to `n-2`, update `farthest = max(farthest, i + nums[i])`.
+3. If `i == currentJumpEnd`, the current jump's range is exhausted: increment `jumps` and set `currentJumpEnd = farthest`.
+4. Continue scanning until the loop ends (index reaches `n-1`).
+5. Return `jumps` as the minimum number of jumps.
 
 ```csharp
 public class JumpGameIIOptimal
@@ -248,8 +305,7 @@ public class JumpGameIIOptimal
 Time Complexity: O(n) — single pass through the array with O(1) work per index.
 Space Complexity: O(1) — only scalar trackers used.
 
-**Explanation:**
-Dry run on `nums = [2,3,1,1,4]` (indices 0..4):
+**Walkthrough:** Dry run on `nums = [2,3,1,1,4]` (indices 0..3, since loop runs `i < n-1 = 4`):
 
 | i | nums[i] | farthest = max(farthest, i+nums[i]) | i == currentJumpEnd? | jumps | currentJumpEnd (after update) |
 |---|---------|--------------------------------------|-----------------------|-------|--------------------------------|
@@ -258,9 +314,7 @@ Dry run on `nums = [2,3,1,1,4]` (indices 0..4):
 | 2 | 1       | max(4, 2+1)=4                        | yes (2==2)             | 2     | 4                               |
 | 3 | 1       | max(4, 3+1)=4                        | no (3!=4)              | 2     | 4                               |
 
-Loop ends at `i = n-1 = 4` (loop condition is `i < n-1`). Final answer: `jumps = 2`.
-
-Interpretation: `currentJumpEnd` is the farthest index reachable with the jumps taken so far; `farthest` is continuously updated to the best possible reach one jump beyond that. When `i` catches up to `currentJumpEnd`, it means we've exhausted the current jump's range and must commit to a new jump, so we "use" one jump and extend the boundary to `farthest`. This greedily simulates a level-by-level BFS expansion in O(n) instead of O(n) per level.
+Loop ends after `i = 3`. Return `jumps = 2`, matching the expected output. `currentJumpEnd` marks the farthest reachable with jumps taken so far; when `i` catches up to it, the current jump's range is exhausted, forcing a new jump and extending the boundary to `farthest` — simulating a level-by-level BFS expansion in O(n).
 
 ---
 
@@ -276,6 +330,12 @@ Given the arrival and departure times of all trains that arrive at a railway sta
 
 **Brute Force Approach:**
 For each train, count how many other trains' intervals overlap with it (i.e., how many trains are at the station at the same time as its arrival). The answer is the maximum such overlap count across all trains.
+
+**Logic (Steps):**
+1. For each train `i`, start `platformsNeeded = 1` (counting itself).
+2. Compare against every other train `j`: if `arrival[j] <= arrival[i] <= departure[j]`, train `j` is still at the station when `i` arrives, so increment `platformsNeeded`.
+3. Track `maxPlatforms = max(maxPlatforms, platformsNeeded)` across all trains `i`.
+4. Return `maxPlatforms` after checking every train.
 
 ```csharp
 public class MinPlatformsBruteForce
@@ -308,8 +368,17 @@ public class MinPlatformsBruteForce
 Time Complexity: O(n^2) — for every train, scan all other trains.
 Space Complexity: O(1) — no extra data structures beyond counters.
 
+**Walkthrough:** With `arrival = [900, 940, 950, 1100, 1500, 1800], departure = [910, 1200, 1120, 1130, 1900, 2000]`, checking train at index 2 (`arrival=950`): train 0 (900-910) does not cover 950; train 1 (940-1200) covers 950; train 2 is itself; train 3 (1100-1130) does not cover 950. So `platformsNeeded` for train 2 counts itself plus train 1 = 2 so far, but similarly checking around 940-950 window across all trains yields a peak of 3 overlapping trains (as stated in the problem's example). The maximum `platformsNeeded` over all trains is `3`, matching the expected output.
+
 **Optimized Approach:**
 Sort arrival and departure times independently. Use two pointers to sweep through events in time order: whenever a train arrives (before or at the time the earliest still-active train would depart), increment the platform count; whenever a train departs, decrement it. Track the maximum concurrent platform count.
+
+**Logic (Steps):**
+1. Clone and sort `arrival` and `departure` arrays independently, ascending.
+2. Use two pointers `arrivalPointer` and `departurePointer`, both starting at 0, plus counters `platformsNeeded = 0` and `maxPlatforms = 0`.
+3. If `sortedArrival[arrivalPointer] <= sortedDeparture[departurePointer]`, a new train arrives before the earliest pending departure: increment `platformsNeeded`, update `maxPlatforms`, and advance `arrivalPointer`.
+4. Otherwise a train departs first: decrement `platformsNeeded` and advance `departurePointer`.
+5. Continue until one pointer exhausts the array; return `maxPlatforms`.
 
 ```csharp
 public class MinPlatformsOptimal
@@ -350,8 +419,15 @@ public class MinPlatformsOptimal
 Time Complexity: O(n log n) — dominated by sorting both arrays; the two-pointer sweep itself is O(n).
 Space Complexity: O(n) for the cloned, sorted arrival and departure arrays.
 
-**Explanation:**
-Sorting arrivals and departures separately lets us process station events strictly in chronological order without needing to track which arrival matches which departure (only counts matter, not identities). Every time an arrival event occurs before or simultaneously with the earliest pending departure, one more platform is occupied; every departure frees one. The running maximum of occupied platforms is the answer, since it represents the worst-case moment of simultaneous train presence.
+**Walkthrough:** With `arrival = [900, 940, 950, 1100, 1500, 1800]`, `departure = [910, 1200, 1120, 1130, 1900, 2000]`, sorted independently: `sortedArrival = [900, 940, 950, 1100, 1500, 1800]`, `sortedDeparture = [910, 1120, 1130, 1200, 1900, 2000]`.
+- `900 <= 910` → arrive: `platformsNeeded=1`, `maxPlatforms=1`.
+- `940 <= 910`? No → depart: `platformsNeeded=0`, `departurePointer=1`.
+- `940 <= 1120` → arrive: `platformsNeeded=1`, `maxPlatforms=1`.
+- `950 <= 1120` → arrive: `platformsNeeded=2`, `maxPlatforms=2`.
+- `1100 <= 1120` → arrive: `platformsNeeded=3`, `maxPlatforms=3`.
+- `1500 <= 1130`? No → depart repeatedly until `1500`'s arrival fits, decrementing `platformsNeeded` back down.
+
+The peak `platformsNeeded` reached during the sweep is `3`, so `maxPlatforms = 3`, matching the expected output.
 
 ---
 
@@ -367,6 +443,13 @@ Given a set of `N` jobs, where each job has a deadline and a profit associated w
 
 **Brute Force Approach:**
 Try every permutation of jobs (or every subset with valid deadline assignment) and compute the profit for each valid schedule, keeping track of the maximum.
+
+**Logic (Steps):**
+1. Recurse through jobs by index, tracking a `slots` boolean array (which time slots are occupied), `jobsDone`, and `profit`.
+2. For the current job, try placing it in every free slot from its `deadline` down to `1`; mark the slot occupied, recurse, then backtrack (unmark) after returning.
+3. Also try skipping the current job entirely (no slot placement).
+4. When `index == jobs.Count`, compare `profit` against the best seen `maxProfit` and update `maxProfit`/`maxJobsAtBestProfit` if it's higher.
+5. Return `(maxJobsAtBestProfit, maxProfit)` after all branches are explored.
 
 ```csharp
 public class JobSequencingBruteForce
@@ -420,8 +503,18 @@ public class JobSequencingBruteForce
 Time Complexity: O(2^n * maxDeadline) roughly, since each job can be placed in any free slot or skipped — exponential in the worst case.
 Space Complexity: O(n + maxDeadline) for recursion stack and slot array.
 
+**Walkthrough:** With `jobs = [(1,d=4,p=20), (2,d=1,p=10), (3,d=1,p=40), (4,d=1,p=30)]`, one explored branch places job 3 (profit 40) in slot 1, then job 1 (profit 20) in slot 4 (job 2 and job 4 can't find free slots at deadline 1 since it's taken), giving `jobsDone=2, profit=60`. The recursion explores all other combinations too, but none exceeds this profit, so `maxProfit=60`, `maxJobsAtBestProfit=2` is returned, matching the expected output.
+
 **Optimized Approach:**
 Sort jobs by profit in descending order. For each job (highest profit first), greedily place it in the latest available free slot at or before its deadline (scanning from `deadline` down to `1`). This ensures earlier slots stay open for jobs with tighter deadlines.
+
+**Logic (Steps):**
+1. Sort jobs descending by `Profit`.
+2. Create a `slot` array of size `maxDeadline + 1`, initialized to `0` (free), where `slot[d]` stores the job id occupying slot `d`.
+3. For each job (highest profit first), scan slots from `min(maxDeadline, job.Deadline)` down to `1`, looking for the first free slot.
+4. If a free slot `d` is found, assign `slot[d] = job.Id`, increment `jobsDone`, add `job.Profit` to `totalProfit`, and stop scanning for this job.
+5. If no free slot is found at or before its deadline, the job is skipped.
+6. Return `(jobsDone, totalProfit)` after processing all jobs.
 
 ```csharp
 public class JobSequencingOptimal
@@ -464,8 +557,13 @@ public class JobSequencingOptimal
 Time Complexity: O(n log n + n * maxDeadline) — sorting takes O(n log n); for each job, scanning backward for a free slot takes up to O(maxDeadline) in the worst case. (This can be improved to near O(n log n) using a Union-Find/Disjoint Set structure that jumps directly to the nearest free slot.)
 Space Complexity: O(maxDeadline) for the slot array.
 
-**Explanation:**
-Choosing the highest-profit jobs first is greedy on the objective directly (profit), and placing each chosen job as late as possible (closest to its deadline) preserves earlier slots for jobs that might have tighter deadlines later in the iteration — this maximizes the chance that all remaining high-profit jobs can still be scheduled. An optional Union-Find optimization stores, for each slot, a pointer to the nearest available slot at or before it, allowing O(alpha(n)) slot lookups instead of a linear backward scan, improving the total complexity to O(n log n).
+**Walkthrough:** With `jobs = [(1,d=4,p=20), (2,d=1,p=10), (3,d=1,p=40), (4,d=1,p=30)]`, sorted descending by profit: `[job3(p=40,d=1), job4(p=30,d=1), job1(p=20,d=4), job2(p=10,d=1)]`. `slot = [0,0,0,0,0]` (indices 0..4), `jobsDone=0`, `totalProfit=0`.
+- job3 (d=1): scan from slot 1 down to 1 → slot 1 free → `slot[1]=3`, `jobsDone=1`, `totalProfit=40`.
+- job4 (d=1): scan from slot 1 down to 1 → slot 1 taken → no free slot → skip.
+- job1 (d=4): scan from slot 4 down to 1 → slot 4 free → `slot[4]=1`, `jobsDone=2`, `totalProfit=60`.
+- job2 (d=1): scan from slot 1 down to 1 → slot 1 taken → skip.
+
+Return `(jobsDone=2, totalProfit=60)`, matching the expected output "Jobs done = 2, Max profit = 60". Choosing the highest-profit jobs first and placing each as late as possible preserves earlier slots for jobs with tighter deadlines, maximizing how many high-profit jobs can still be scheduled.
 
 ---
 
@@ -481,6 +579,13 @@ There are `N` children standing in a line, each with a rating value given in an 
 
 **Brute Force Approach:**
 Start every child with 1 candy. Repeatedly scan the array left to right and right to left, incrementing a child's candies whenever a neighbor constraint is violated, until no more updates occur (this converges but may take multiple passes, O(n) per pass, potentially O(n) passes in the worst case).
+
+**Logic (Steps):**
+1. Initialize every child's `candies` to `1`.
+2. Repeat a full left-to-right scan of all children while any change occurred in the previous pass (`changed = true`).
+3. For each child `i`, if `ratings[i] > ratings[i-1]` and `candies[i] <= candies[i-1]`, fix it: `candies[i] = candies[i-1] + 1`, mark `changed = true`.
+4. Similarly, if `ratings[i] > ratings[i+1]` and `candies[i] <= candies[i+1]`, fix it: `candies[i] = candies[i+1] + 1`, mark `changed = true`.
+5. Once a full pass produces no changes, sum and return the `candies` array.
 
 ```csharp
 public class CandyBruteForce
@@ -522,8 +627,21 @@ public class CandyBruteForce
 Time Complexity: O(n^2) in the worst case — repeated full passes until convergence.
 Space Complexity: O(n) for the candies array.
 
+**Walkthrough:** With `ratings = [1, 0, 2]`, `candies = [1, 1, 1]` initially.
+- Pass 1: `i=1`: `ratings[1]=0 > ratings[0]=1`? No. `ratings[1]=0 > ratings[2]=2`? No. `i=2`: `ratings[2]=2 > ratings[1]=0` and `candies[2]=1 <= candies[1]=1` → `candies[2] = 2`, `changed=true`. `i=0`: `ratings[0]=1 > ratings[1]=0` and `candies[0]=1 <= candies[1]=1` → `candies[0] = 2`, `changed=true`. After pass 1: `candies = [2, 1, 2]`.
+- Pass 2: no violations found, `changed=false`, loop ends.
+
+Sum = `2+1+2 = 5`, matching the expected output.
+
 **Optimized Approach:**
 Do exactly two linear passes. Left-to-right pass: if `ratings[i] > ratings[i-1]`, then `candies[i] = candies[i-1] + 1` (ensures the right-neighbor-higher constraint). Right-to-left pass: if `ratings[i] > ratings[i+1]`, then `candies[i] = max(candies[i], candies[i+1] + 1)` (ensures the left-neighbor-higher constraint without breaking the first pass's guarantee). Sum the final candies array.
+
+**Logic (Steps):**
+1. Initialize every child's `candies` to `1`.
+2. Left-to-right pass (`i` from `1` to `n-1`): if `ratings[i] > ratings[i-1]`, set `candies[i] = candies[i-1] + 1`.
+3. Right-to-left pass (`i` from `n-2` down to `0`): if `ratings[i] > ratings[i+1]`, set `candies[i] = max(candies[i], candies[i+1] + 1)` (uses `max` so it never undoes the left-to-right pass's guarantee).
+4. Sum all values in `candies`.
+5. Return the total.
 
 ```csharp
 public class CandyOptimal
@@ -564,22 +682,17 @@ public class CandyOptimal
 Time Complexity: O(n) — two linear passes plus one summation pass, all O(n).
 Space Complexity: O(n) for the candies array (can be optimized to O(1) with a slope-counting technique, but the two-pass array version is the standard clean solution).
 
-**Explanation:**
-Dry run on `ratings = [1, 0, 2]` (n = 3):
-
-Initialize: `candies = [1, 1, 1]`
+**Walkthrough:** Dry run on `ratings = [1, 0, 2]` (n = 3). Initialize: `candies = [1, 1, 1]`.
 
 Left-to-right pass (i = 1 to 2):
-- i=1: `ratings[1]=0`, `ratings[0]=1` → `0 > 1`? No → `candies[1]` stays `1`. `candies = [1, 1, 1]`
-- i=2: `ratings[2]=2`, `ratings[1]=0` → `2 > 0`? Yes → `candies[2] = candies[1] + 1 = 2`. `candies = [1, 1, 2]`
+- i=1: `ratings[1]=0 > ratings[0]=1`? No → `candies[1]` stays `1`.
+- i=2: `ratings[2]=2 > ratings[1]=0`? Yes → `candies[2] = candies[1] + 1 = 2`. `candies = [1, 1, 2]`.
 
 Right-to-left pass (i = 1 down to 0):
-- i=1: `ratings[1]=0`, `ratings[2]=2` → `0 > 2`? No → `candies[1]` stays `1`. `candies = [1, 1, 2]`
-- i=0: `ratings[0]=1`, `ratings[1]=0` → `1 > 0`? Yes → `candies[0] = max(candies[0], candies[1]+1) = max(1, 2) = 2`. `candies = [2, 1, 2]`
+- i=1: `ratings[1]=0 > ratings[2]=2`? No → `candies[1]` stays `1`.
+- i=0: `ratings[0]=1 > ratings[1]=0`? Yes → `candies[0] = max(1, candies[1]+1) = max(1, 2) = 2`. `candies = [2, 1, 2]`.
 
-Final candies array: `[2, 1, 2]`. Sum = `2 + 1 + 2 = 5`.
-
-Interpretation: the left-to-right pass alone correctly handles all "ascending" neighbor relationships (child gets more than the left neighbor when rating is higher), but it cannot fix "descending" relationships (child 0 needing more than child 1 due to comparing against the right). The right-to-left pass fixes those descending cases using `max` so it never undoes a guarantee already established by the first pass — each child's final candy count is the maximum of what both passes independently require, satisfying both neighbor constraints simultaneously.
+Sum = `2 + 1 + 2 = 5`, matching the expected output. The left-to-right pass handles ascending neighbor relationships, and the right-to-left pass fixes descending ones using `max` so it never undoes the first pass's guarantee.
 
 ---
 
@@ -595,6 +708,13 @@ Given a set of non-overlapping intervals sorted by their start times, and a new 
 
 **Brute Force Approach:**
 Add the new interval to the list, sort all intervals by start time, then merge overlapping intervals in a single pass (the standard "merge intervals" technique applied after insertion and sorting).
+
+**Logic (Steps):**
+1. Append `newInterval` to the list of `intervals`, then sort the combined list ascending by start value.
+2. Walk the sorted list, maintaining a `merged` result list.
+3. If `merged` is empty, or the last merged interval's end is strictly less than the current interval's start, append the current interval as a new entry.
+4. Otherwise the current interval overlaps the last merged one: expand the last merged interval's end to `max(lastEnd, current end)`.
+5. Return `merged` as an array after processing all intervals.
 
 ```csharp
 public class InsertIntervalBruteForce
@@ -624,8 +744,22 @@ public class InsertIntervalBruteForce
 Time Complexity: O(n log n) — dominated by sorting all n+1 intervals (even though the original list was already sorted, this approach re-sorts everything).
 Space Complexity: O(n) for the merged list and the combined list.
 
+**Walkthrough:** With `intervals = [[1,3],[6,9]]`, `newInterval = [2,5]`, the combined list sorted by start is `[[1,3],[2,5],[6,9]]`.
+- `[1,3]`: `merged` empty → add. `merged = [[1,3]]`.
+- `[2,5]`: last merged end `3` is not `< 2` → overlap → expand: `merged[-1][1] = max(3,5) = 5`. `merged = [[1,5]]`.
+- `[6,9]`: last merged end `5 < 6` → no overlap → add. `merged = [[1,5],[6,9]]`.
+
+Return `[[1,5],[6,9]]`, matching the expected output.
+
 **Optimized Approach:**
 Since the original intervals are already sorted and non-overlapping, process them in a single linear pass with three phases: (1) add all intervals that end strictly before the new interval starts (no overlap, come before), (2) merge all intervals that overlap with the new interval by expanding its bounds, then add the merged interval, (3) add all remaining intervals that start strictly after the (possibly expanded) new interval ends.
+
+**Logic (Steps):**
+1. Phase 1: while `intervals[i][1] < newInterval[0]`, add `intervals[i]` unchanged to `result` and advance `i`.
+2. Phase 2: initialize `mergedStart = newInterval[0]`, `mergedEnd = newInterval[1]`; while `intervals[i][0] <= mergedEnd`, absorb the interval by updating `mergedStart = min(mergedStart, intervals[i][0])` and `mergedEnd = max(mergedEnd, intervals[i][1])`, advancing `i` each time.
+3. Add the single merged `[mergedStart, mergedEnd]` interval to `result`.
+4. Phase 3: add all remaining intervals (starting after `mergedEnd`) unchanged to `result`.
+5. Return `result` as an array.
 
 ```csharp
 public class InsertIntervalOptimal
@@ -668,8 +802,12 @@ public class InsertIntervalOptimal
 Time Complexity: O(n) — a single linear pass through the intervals array with no sorting needed since the input is already sorted.
 Space Complexity: O(n) for the result list (input is not counted as extra space).
 
-**Explanation:**
-Because the input is guaranteed sorted and non-overlapping, we never need to re-sort — we only need to find the contiguous "window" of existing intervals that overlap the new one and collapse that window into a single merged interval. Phase 1 greedily emits everything strictly before the overlap window untouched, phase 2 greedily expands the merged interval's bounds by absorbing every interval that touches or overlaps it, and phase 3 emits everything after untouched — this three-phase greedy sweep achieves linear time versus the O(n log n) brute-force resort.
+**Walkthrough:** With `intervals = [[1,3],[6,9]]`, `newInterval = [2,5]`, `i = 0`.
+- Phase 1: `intervals[0][1]=3 < newInterval[0]=2`? No → skip phase 1, `i` stays `0`.
+- Phase 2: `mergedStart=2, mergedEnd=5`. `intervals[0][0]=1 <= 5` → absorb: `mergedStart=min(2,1)=1`, `mergedEnd=max(5,3)=5`, `i=1`. `intervals[1][0]=6 <= 5`? No → stop phase 2. Add `[1,5]` to `result`.
+- Phase 3: `intervals[1]=[6,9]` remains → add unchanged. `result = [[1,5],[6,9]]`.
+
+Return `[[1,5],[6,9]]`, matching the expected output.
 
 ---
 
@@ -685,6 +823,13 @@ Given an array of intervals, find the minimum number of intervals that must be r
 
 **Brute Force Approach:**
 Try every subset of intervals (or equivalently, decide for each interval whether to keep or remove it) and check if the kept subset is entirely non-overlapping, tracking the maximum size of a valid non-overlapping subset. The answer is `n - maxValidSubsetSize`.
+
+**Logic (Steps):**
+1. Recurse through intervals by index, tracking `lastEnd` (end of the last kept interval) and `kept` count.
+2. At each index, branch into two options: remove (skip) the current interval, or keep it.
+3. Keeping is only valid if `intervals[index][0] >= lastEnd`; if valid, recurse with `intervals[index][1]` as the new `lastEnd` and `kept + 1`.
+4. When `index == n`, update `maxKept = max(maxKept, kept)`.
+5. Return `n - maxKept` as the minimum number of removals.
 
 ```csharp
 public class NonOverlappingIntervalsBruteForce
@@ -720,8 +865,17 @@ public class NonOverlappingIntervalsBruteForce
 Time Complexity: O(2^n) — every interval is either kept or removed, giving exponential branching.
 Space Complexity: O(n) for the recursion stack.
 
+**Walkthrough:** With `intervals = [[1,2],[2,3],[3,4],[1,3]]`, one branch keeps `[1,2]` (`lastEnd=2`), then `[2,3]` (`2>=2` valid, `lastEnd=3`), then `[3,4]` (`3>=3` valid, `lastEnd=4`), skipping `[1,3]` (`1>=4` invalid) — giving `kept=3`. No branch keeps more than 3 non-overlapping intervals out of 4, so `maxKept=3`. Return `n - maxKept = 4 - 3 = 1`, matching the expected output.
+
 **Optimized Approach:**
 Sort intervals by their end time. Greedily keep an interval if its start time is greater than or equal to the end time of the last kept interval; otherwise, it must be removed (since we always prefer to keep the interval that frees up the earliest room for subsequent intervals). Count removals directly.
+
+**Logic (Steps):**
+1. Sort `intervals` ascending by end value.
+2. Initialize `removals = 0` and `lastEnd = intervals[0][1]`.
+3. For each subsequent interval, if `intervals[i][0] < lastEnd`, it overlaps the last kept interval: increment `removals` (discard it, since sorted-by-end means it can't end earlier than the one already kept).
+4. Otherwise it doesn't overlap: update `lastEnd = intervals[i][1]` to keep it.
+5. Return `removals` after scanning all intervals.
 
 ```csharp
 public class NonOverlappingIntervalsOptimal
@@ -758,5 +912,11 @@ public class NonOverlappingIntervalsOptimal
 Time Complexity: O(n log n) for sorting by end time, followed by O(n) for the single greedy pass.
 Space Complexity: O(1) extra space if the sort is done in place (excluding sort's internal overhead), aside from O(n)/O(log n) used internally by the sorting algorithm.
 
-**Explanation:**
-This is the complement of the "N Meetings in One Room" problem: maximizing the count of non-overlapping intervals kept is equivalent to minimizing the count removed (`removals = n - maxKept`). Sorting by end time and greedily keeping the earliest-ending non-conflicting interval at each step maximizes the number retained, by the same exchange-argument logic used in interval scheduling — keeping the interval that ends soonest never constrains future choices more than any alternative would.
+**Walkthrough:** With `intervals = [[1,2],[2,3],[3,4],[1,3]]`, sorted by end: `[[1,2],[2,3],[1,3],[3,4]]`. `removals=0`, `lastEnd=2` (from `[1,2]`).
+- `[2,3]`: `2 < 2`? No → keep, `lastEnd=3`.
+- `[1,3]`: `1 < 3`? Yes → overlap → `removals=1`.
+- `[3,4]`: `3 < 3`? No → keep, `lastEnd=4`.
+
+Return `removals=1`, matching the expected output. This is the complement of the "N Meetings in One Room" problem: sorting by end time and greedily keeping the earliest-ending non-conflicting interval maximizes the count retained, minimizing removals.
+
+---

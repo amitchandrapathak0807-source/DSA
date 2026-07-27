@@ -37,6 +37,14 @@ So: reach for greedy when you can prove the exchange argument holds; reach for D
 
 This is safe by an exchange argument: giving the smallest sufficient cookie to the least greedy child never hurts, because that small cookie could only have satisfied children with even smaller (or equal) greed anyway — using it on the least greedy child "saves" all larger cookies for greedier children, which can only help or stay equal compared to any other assignment.
 
+**Logic (Steps):**
+1. Sort `greed` ascending so the least demanding child comes first.
+2. Sort `cookies` ascending so the smallest cookie is considered first.
+3. Use two pointers `i` (over `greed`) and `j` (over `cookies`), both starting at 0.
+4. If `cookies[j] >= greed[i]`, the cookie satisfies the child: increment `content`, and advance both `i` and `j`.
+5. Otherwise the cookie is too small for anyone remaining (since children are sorted ascending), so only advance `j`.
+6. Stop when either pointer runs out; return `content`.
+
 ```csharp
 public class Solution {
     public int FindContentChildren(int[] greed, int[] cookies) {
@@ -65,6 +73,13 @@ public class Solution {
 Time Complexity: O(n log n + m log m) for sorting both arrays (n = children, m = cookies), plus O(n + m) for the two-pointer scan.
 Space Complexity: O(1) extra (ignoring sort's internal space).
 
+**Walkthrough:** With `greed = [1, 2, 3]` and `cookies = [1, 1]` (both already sorted): `i = 0, j = 0, content = 0`.
+- `cookies[0] = 1 >= greed[0] = 1` → satisfy child 0: `content = 1`, `i = 1`, `j = 1`.
+- `j = 1` is the last cookie index; `cookies[1] = 1 < greed[1] = 2` → cookie too small, `j = 2`.
+- `j = 2` is out of bounds, loop ends.
+
+Return `content = 1`, matching the expected output `1`.
+
 ---
 
 ## 2. Fractional Knapsack Problem
@@ -79,6 +94,14 @@ Space Complexity: O(1) extra (ignoring sort's internal space).
 **Approach:** Compute each item's value/weight ratio, then sort items in descending order of this ratio. Greedily fill the knapsack: take as much as possible of the current highest-ratio item (all of it if it fits, otherwise only the fraction that fits the remaining capacity), then move to the next.
 
 Why this is safe (exchange argument): suppose an optimal solution does not fully take the item with the highest ratio while capacity remains and a lower-ratio item is (partially) taken instead. Swapping an infinitesimal amount of weight from the lower-ratio item to the higher-ratio item strictly increases (or at worst keeps equal) the total value, since value gained per unit weight is higher. Repeating this swap argument shows any optimal solution can be transformed into the greedy (highest-ratio-first) solution without decreasing value — so greedy is optimal.
+
+**Logic (Steps):**
+1. Compute each item's ratio `Value / Weight`.
+2. Sort items descending by this ratio using `Array.Sort` with a custom comparer.
+3. Walk the sorted items, tracking `remainingCapacity` and `totalValue`.
+4. If the whole item fits (`item.Weight <= remainingCapacity`), take all of it: add its full value, subtract its weight from `remainingCapacity`.
+5. Otherwise take only the fraction that fits: `fraction = remainingCapacity / item.Weight`, add `item.Value * fraction`, and set `remainingCapacity = 0`.
+6. Stop once `remainingCapacity` reaches 0 or all items are processed; return `totalValue`.
 
 ```csharp
 public class Item {
@@ -122,6 +145,14 @@ public class Solution {
 Time Complexity: O(n log n) for sorting by ratio, plus O(n) for the greedy fill.
 Space Complexity: O(1) extra (or O(log n)/O(n) depending on the sort implementation's internal footprint).
 
+**Walkthrough:** With `capacity = 50` and items A(60,10), B(100,20), C(120,30) → ratios A=6.0, B=5.0, C=4.0.
+- Sort descending by ratio: `[A, B, C]`.
+- Item A: weight 10 ≤ remaining 50 → take all. `totalValue = 60`, `remainingCapacity = 40`.
+- Item B: weight 20 ≤ remaining 40 → take all. `totalValue = 160`, `remainingCapacity = 20`.
+- Item C: weight 30 > remaining 20 → take fraction `20/30 = 0.667`. `totalValue += 120 * 0.667 = 80` → `totalValue = 240`, `remainingCapacity = 0`.
+
+Loop stops (`remainingCapacity <= 0`); return `totalValue = 240.0`, matching the expected output.
+
 ---
 
 ## 3. Minimum Number of Coins to Make a Given Value
@@ -138,6 +169,13 @@ Space Complexity: O(1) extra (or O(log n)/O(n) depending on the sort implementat
 **Approach:** Sort denominations in descending order (or assume they are given sorted, as with standard currency). Repeatedly pick the largest denomination that is less than or equal to the remaining value, subtract it, and count it; repeat until the remaining value is 0.
 
 Why this is safe for canonical systems: in a canonical coin system, each denomination is constructed so that taking one larger coin is never "wasteful" compared to any combination of smaller coins that could substitute for it — the denominations are spaced such that the greedy pick never blocks a better solution (this can be verified per-system, e.g., standard currency denominations satisfy this). This property does **not** hold for arbitrary denominations (like `[1, 3, 4]`), which is why greedy can fail there and DP (trying all denominations at each step and taking the minimum) is required in general.
+
+**Logic (Steps):**
+1. Sort `denominations` in descending order.
+2. Initialize `remaining = value` and an empty `result` list.
+3. For each denomination `coin` (largest first), repeatedly subtract `coin` from `remaining` and append it to `result` as long as `remaining >= coin`.
+4. Move to the next smaller denomination once the current one no longer fits.
+5. Stop when `remaining` reaches 0; return `result` (its count is the minimum number of coins).
 
 ```csharp
 public class Solution {
@@ -162,6 +200,15 @@ public class Solution {
 Time Complexity: O(n log n) for sorting denominations (O(n) if already sorted) plus O(V/smallestCoin) in the worst case for the greedy subtraction loop.
 Space Complexity: O(k) where k is the number of coins used in the result.
 
+**Walkthrough:** With `value = 49` and denominations sorted descending `[1000, 500, 100, 50, 20, 10, 5, 2, 1]`, `remaining = 49`, `result = []`.
+- Coins 1000 down to 50 don't fit (`remaining < coin`), skip.
+- `coin = 20`: `49 >= 20` → subtract, `remaining = 29`, `result = [20]`; `29 >= 20` → subtract, `remaining = 9`, `result = [20, 20]`; `9 < 20`, move on.
+- `coin = 10`: `9 < 10`, skip.
+- `coin = 5`: `9 >= 5` → subtract, `remaining = 4`, `result = [20, 20, 5]`; `4 < 5`, move on.
+- `coin = 2`: `4 >= 2` → subtract, `remaining = 2`, `result = [20, 20, 5, 2]`; `2 >= 2` → subtract, `remaining = 0`, `result = [20, 20, 5, 2, 2]`.
+
+`remaining = 0`; return `result = [20, 20, 5, 2, 2]` (5 coins), matching the expected output.
+
 ---
 
 ## 4. Lemonade Change
@@ -179,6 +226,13 @@ Space Complexity: O(k) where k is the number of coins used in the result.
 - If they pay $20, prefer giving change as one $10 + one $5 (if available) over three $5s, saving your $5 bills for future flexibility since $5 bills are more broadly useful (a $10 can only be used to make change for a $20, while a $5 can be used for both $10 and $20 change). If neither combination is available, fail.
 
 This greedy choice (preferring to break a $10 before spending three $5s) is safe because $5 bills are strictly more valuable as "change currency" than $10 bills — a $5 bill can satisfy change for both a $10 and a $20 payment, whereas a $10 bill can only help satisfy change for a $20. Hoarding $5s over $10s never reduces your future flexibility, so it can only help or match any other valid strategy.
+
+**Logic (Steps):**
+1. Track two counters, `fives` and `tens`, both starting at 0.
+2. For a `$5` payment, just increment `fives` (no change owed).
+3. For a `$10` payment, if `fives == 0` fail immediately; otherwise decrement `fives` and increment `tens`.
+4. For a `$20` payment, prefer breaking one `$10` + one `$5` if both are available (decrement each); else if `fives >= 3`, break three `$5`s; else fail.
+5. If every customer is processed without failing, return `true`.
 
 ```csharp
 public class Solution {
@@ -213,6 +267,13 @@ public class Solution {
 Time Complexity: O(n), a single pass over the bills array.
 Space Complexity: O(1), only two counters are used.
 
+**Walkthrough:** With `bills = [5, 5, 5, 10, 20]`, `fives = 0, tens = 0`.
+- `5` → `fives = 1`. `5` → `fives = 2`. `5` → `fives = 3`.
+- `10` → `fives > 0`, so `fives = 2`, `tens = 1`.
+- `20` → `tens > 0 && fives > 0`, so give one `$10` + one `$5`: `tens = 0`, `fives = 1`.
+
+All customers served without failure; return `true`, matching the expected output.
+
 ---
 
 ## 5. Valid Parenthesis String
@@ -232,6 +293,15 @@ Space Complexity: O(1), only two counters are used.
 If `high` ever drops below 0, too many `)`/`*`-as-`)` are forced and no interpretation can recover — return `false` immediately. Clamp `low` to 0 whenever it goes negative, because a negative "minimum open count" isn't meaningful — you simply choose not to treat that many `*` as `)`. At the end, the string is valid if `low == 0` is achievable, i.e., `low` reaching 0 (through clamping) by the end.
 
 Why this range-tracking is safe: since `*` is genuinely ambiguous, a single running count can't represent all reachable states. By tracking the full range `[low, high]` of achievable open-counts at each position, we implicitly explore all interpretations simultaneously without exponential blowup — as long as 0 remains within `[low, high]` at the end (which clamping `low` at 0 ensures we detect), some valid assignment of `*` exists.
+
+**Logic (Steps):**
+1. Track `low` (minimum possible unmatched `(` count) and `high` (maximum possible), both starting at 0.
+2. For `'('`, increment both `low` and `high`.
+3. For `')'`, decrement both `low` and `high`.
+4. For `'*'`, decrement `low` (optimistic: treat as `)`) and increment `high` (optimistic: treat as `(`).
+5. After each character, if `high < 0`, return `false` immediately (too many closes forced, unrecoverable).
+6. If `low < 0`, clamp it to 0 (a negative minimum isn't meaningful).
+7. After processing all characters, return `low == 0`.
 
 ```csharp
 public class Solution {
@@ -263,40 +333,12 @@ public class Solution {
 Time Complexity: O(n), a single pass over the string.
 Space Complexity: O(1), only two counters are used.
 
+**Walkthrough:** With `s = "(*))"`, `low = 0, high = 0`.
+- `(`: `low = 1, high = 1`. `high >= 0`, ok.
+- `*`: `low = 0, high = 2`. `high >= 0`, ok; `low` not negative.
+- `)`: `low = -1, high = 1`. `high >= 0`, ok; `low` clamped to 0.
+- `)`: `low = -1, high = 0`. `high >= 0`, ok; `low` clamped to 0.
+
+End of string: `low == 0`, so return `true`, matching the expected output. (The `*` at step 2 is what makes this work — treating it as `(` keeps `high` viable, confirming a valid interpretation exists even though a single running count would have wrongly failed on step 3.)
+
 ---
-
-## Explanation: Dry Runs
-
-### Dry Run — Fractional Knapsack
-
-Consider `capacity = 50` with items:
-
-| Item | Value | Weight | Ratio (Value/Weight) |
-|------|-------|--------|-----------------------|
-| A    | 60    | 10     | 6.0                   |
-| B    | 100   | 20     | 5.0                   |
-| C    | 120   | 30     | 4.0                   |
-
-**Step 1 — Sort by ratio descending:** Order becomes `A (6.0), B (5.0), C (4.0)`.
-
-**Step 2 — Fill greedily:**
-- Item A: weight 10 ≤ remaining capacity 50 → take all of it. `totalValue = 60`, `remainingCapacity = 50 - 10 = 40`.
-- Item B: weight 20 ≤ remaining capacity 40 → take all of it. `totalValue = 60 + 100 = 160`, `remainingCapacity = 40 - 20 = 20`.
-- Item C: weight 30 > remaining capacity 20 → take a fraction: `fraction = 20 / 30 = 0.667`. Value added = `120 * 0.667 = 80`. `totalValue = 160 + 80 = 240`, `remainingCapacity = 0`.
-
-**Result:** `totalValue = 240.0`, matching the expected output. The greedy pass never needed to "undo" a choice — each item was fully consumed in ratio order until capacity ran out, confirming the exchange argument in practice: no rearrangement of these picks could produce more value given the capacity constraint.
-
-### Dry Run — Valid Parenthesis String on `"(*))"`
-
-Track `low` (min possible open count) and `high` (max possible open count), starting at `low = 0, high = 0`.
-
-| Step | Char | Action | low | high | Check |
-|------|------|--------|-----|------|-------|
-| 1 | `(` | low++, high++ | 1 | 1 | high ≥ 0, ok |
-| 2 | `*` | low--, high++ | 0 | 2 | high ≥ 0; low was 0, no clamp needed |
-| 3 | `)` | low--, high-- | -1 → clamp to 0 | 1 | high ≥ 0, ok; low clamped to 0 |
-| 4 | `)` | low--, high-- | -1 → clamp to 0 | 0 | high ≥ 0, ok; low clamped to 0 |
-
-End of string: `low = 0`, so the function returns `true`.
-
-**Why the range was necessary:** at step 2, the `*` is genuinely ambiguous — it could be `(` (pushing possible open count up to 2), `)` (pushing it down to 0), or empty (leaving it at 1). A single running count would have to arbitrarily commit to one interpretation right away and could easily pick wrong (e.g., committing to `*` = `)` would give a count of 0 after step 2, and then step 3's `)` would immediately push the count to -1, incorrectly reporting failure even though the string is actually valid via `*` = `(`). By keeping the whole reachable range `[low, high]`, the algorithm defers the decision: it only declares failure when even the most optimistic interpretation (`high`) goes negative, and it only declares success if 0 is reachable (i.e., `low` can be brought down to exactly 0) by the end — both of which correctly capture the true satisfiability of the wildcard string without needing to enumerate every combination of `*` assignments explicitly.

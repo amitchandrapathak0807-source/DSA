@@ -12,6 +12,12 @@
 
 **Brute Force Approach:** Scan every element from left to right and compare it with the target. Since the array is sorted, this works but does not exploit the ordering.
 
+**Logic (Steps):**
+1. Loop `i` from `0` to `arr.Length - 1`.
+2. Compare `arr[i]` with `target`.
+3. If they match, return `i` immediately.
+4. If the loop finishes with no match, return `-1`.
+
 ```csharp
 public class Solution
 {
@@ -28,11 +34,23 @@ public class Solution
     }
 }
 ```
-
 Time Complexity: O(n) — every element may need to be checked.
 Space Complexity: O(1) — no extra space used.
 
+**Walkthrough:** Using `arr = [1, 3, 5, 7, 9, 11], target = 7`.
+- `i=0`: `1≠7`. `i=1`: `3≠7`. `i=2`: `5≠7`. `i=3`: `7==7` → return `3`.
+Returned value `3` matches the expected output.
+
+---
+
 **Optimized Approach:** Since the array is sorted, repeatedly compare the target with the middle element and discard half of the search space each time. This is the classic binary search algorithm.
+
+**Logic (Steps):**
+1. Initialize `low = 0`, `high = arr.Length - 1`.
+2. While `low <= high`, compute `mid = low + (high - low) / 2`.
+3. If `arr[mid] == target`, return `mid` immediately.
+4. If `arr[mid] < target`, the target must be in the right half, so set `low = mid + 1`; otherwise set `high = mid - 1` (search left half).
+5. If the loop exits without a match, return `-1`.
 
 ```csharp
 public class Solution
@@ -66,13 +84,11 @@ public class Solution
 
 Time Complexity: O(log n), Space Complexity: O(1).
 
-**Explanation:** Dry run on `arr = [1, 3, 5, 7, 9, 11], target = 7` (indices 0..5):
-
-- Iteration 1: `low = 0, high = 5`, `mid = 0 + (5 - 0) / 2 = 2`. `arr[2] = 5`. Since `5 < 7`, discard the left half and set `low = mid + 1 = 3`.
-- Iteration 2: `low = 3, high = 5`, `mid = 3 + (5 - 3) / 2 = 4`. `arr[4] = 9`. Since `9 > 7`, discard the right half and set `high = mid - 1 = 3`.
-- Iteration 3: `low = 3, high = 3`, `mid = 3 + (3 - 3) / 2 = 3`. `arr[3] = 7`. Match found — return `3`.
-
-The search space shrank from 6 elements → 3 elements → 1 element, taking only 3 comparisons instead of up to 6 in the linear scan.
+**Walkthrough:** Dry run on `arr = [1, 3, 5, 7, 9, 11], target = 7` (indices 0..5):
+- Iteration 1: `low=0, high=5`, `mid=2`. `arr[2]=5 < 7` → `low=3`.
+- Iteration 2: `low=3, high=5`, `mid=4`. `arr[4]=9 > 7` → `high=3`.
+- Iteration 3: `low=3, high=3`, `mid=3`. `arr[3]=7` → match, return `3`.
+Returned value `3` matches the expected output — 3 comparisons instead of up to 6 in the linear scan.
 
 ---
 
@@ -86,6 +102,12 @@ The search space shrank from 6 elements → 3 elements → 1 element, taking onl
 - Explanation: `arr[1] = 4` is the first element that is `>= 4`.
 
 **Brute Force Approach:** Traverse the array from left to right and return the index of the first element that is `>= x`.
+
+**Logic (Steps):**
+1. Loop `i` from `0` to `n-1`.
+2. Check if `arr[i] >= x`.
+3. If so, return `i` immediately (first qualifying index).
+4. If the loop finishes with no match, return `n`.
 
 ```csharp
 public class Solution
@@ -104,10 +126,22 @@ public class Solution
     }
 }
 ```
-
 Time Complexity: O(n), Space Complexity: O(1).
 
+**Walkthrough:** Using `arr = [3, 4, 4, 4, 5, 8, 10], x = 4`.
+- `i=0`: `3>=4`? No. `i=1`: `4>=4`? Yes → return `1`.
+Returned value `1` matches the expected output.
+
+---
+
 **Optimized Approach:** Use binary search. Whenever `arr[mid] >= x`, this index is a *candidate* answer, so record it and try to find an even smaller valid index by searching the left half. Otherwise, move to the right half.
+
+**Logic (Steps):**
+1. Initialize `low = 0`, `high = n - 1`, and `ans = n` (default when no element qualifies).
+2. While `low <= high`, compute `mid = low + (high - low) / 2`.
+3. If `arr[mid] >= x`, record `ans = mid` as a candidate and search the left half (`high = mid - 1`) for a smaller valid index.
+4. Otherwise, `arr[mid] < x`, so discard the left half (`low = mid + 1`).
+5. Return `ans` once the loop ends.
 
 ```csharp
 public class Solution
@@ -140,14 +174,12 @@ public class Solution
 
 Time Complexity: O(log n), Space Complexity: O(1).
 
-**Explanation:** Dry run on `arr = [3, 4, 4, 4, 5, 8, 10], x = 4` (indices 0..6):
-
-- Iteration 1: `low = 0, high = 6`, `mid = 3`. `arr[3] = 4`, which is `>= 4` → candidate `ans = 3`, shrink right side: `high = mid - 1 = 2`.
-- Iteration 2: `low = 0, high = 2`, `mid = 1`. `arr[1] = 4`, which is `>= 4` → better candidate `ans = 1`, shrink right side: `high = mid - 1 = 0`.
-- Iteration 3: `low = 0, high = 0`, `mid = 0`. `arr[0] = 3`, which is `< 4` → discard left side: `low = mid + 1 = 1`.
-- Now `low = 1 > high = 0`, loop ends.
-
-Final answer: `ans = 1`. Each iteration halved the search space (7 → 3 → 1 elements) while continuously tightening the best candidate index.
+**Walkthrough:** Dry run on `arr = [3, 4, 4, 4, 5, 8, 10], x = 4` (indices 0..6):
+- Iteration 1: `low=0, high=6`, `mid=3`. `arr[3]=4 >= 4` → `ans=3`, `high=2`.
+- Iteration 2: `low=0, high=2`, `mid=1`. `arr[1]=4 >= 4` → `ans=1`, `high=0`.
+- Iteration 3: `low=0, high=0`, `mid=0`. `arr[0]=3 < 4` → `low=1`.
+- `low=1 > high=0`, loop ends.
+Final `ans = 1`, matching the expected output.
 
 ---
 
@@ -161,6 +193,12 @@ Final answer: `ans = 1`. Each iteration halved the search space (7 → 3 → 1 e
 - Explanation: `arr[4] = 5` is the first element that is strictly `> 4`.
 
 **Brute Force Approach:** Traverse the array from left to right and return the index of the first element strictly greater than `x`.
+
+**Logic (Steps):**
+1. Loop `i` from `0` to `n-1`.
+2. Check if `arr[i] > x`.
+3. If so, return `i` immediately.
+4. If the loop finishes with no match, return `n`.
 
 ```csharp
 public class Solution
@@ -179,10 +217,22 @@ public class Solution
     }
 }
 ```
-
 Time Complexity: O(n), Space Complexity: O(1).
 
+**Walkthrough:** Using `arr = [3, 4, 4, 4, 5, 8, 10], x = 4`.
+- `i=0..3`: `3,4,4,4` none `>4`. `i=4`: `5>4` → return `4`.
+Returned value `4` matches the expected output.
+
+---
+
 **Optimized Approach:** This is almost identical to lower bound, except the comparison condition uses strict inequality (`arr[mid] > x` instead of `arr[mid] >= x`).
+
+**Logic (Steps):**
+1. Initialize `low = 0`, `high = n - 1`, `ans = n`.
+2. While `low <= high`, compute `mid = low + (high - low) / 2`.
+3. If `arr[mid] > x`, record `ans = mid` and search left (`high = mid - 1`) for a smaller valid index.
+4. Otherwise, `arr[mid] <= x`, so discard the left half (`low = mid + 1`).
+5. Return `ans` once the loop ends.
 
 ```csharp
 public class Solution
@@ -215,7 +265,12 @@ public class Solution
 
 Time Complexity: O(log n), Space Complexity: O(1).
 
-**Explanation:** On `arr = [3, 4, 4, 4, 5, 8, 10], x = 4`, binary search proceeds similarly to lower bound but only accepts strictly greater values as candidates: `mid = 3` (`arr[3] = 4`, not `> 4`, move right), `mid = 5` (`arr[5] = 8 > 4`, candidate `ans = 5`, move left), `mid = 4` (`arr[4] = 5 > 4`, candidate `ans = 4`, move left), search ends with `low > high`. Final answer: `4`.
+**Walkthrough:** On `arr = [3, 4, 4, 4, 5, 8, 10], x = 4`:
+- `mid=3`: `arr[3]=4`, not `>4` → `low=4`.
+- `mid=5`: `arr[5]=8 > 4` → `ans=5`, `high=4`.
+- `mid=4`: `arr[4]=5 > 4` → `ans=4`, `high=3`.
+- `low=4 > high=3`, loop ends.
+Final `ans = 4`, matching the expected output.
 
 ---
 
@@ -234,6 +289,12 @@ Time Complexity: O(log n), Space Complexity: O(1).
 
 **Brute Force Approach:** Scan the array and return the index of the first element that is `>= x`; if none found, the insert position is at the end (`n`).
 
+**Logic (Steps):**
+1. Loop `i` from `0` to `n-1`.
+2. Check if `arr[i] >= x`.
+3. If so, return `i` immediately.
+4. If the loop finishes with no match, return `n` (insert at the end).
+
 ```csharp
 public class Solution
 {
@@ -251,10 +312,22 @@ public class Solution
     }
 }
 ```
-
 Time Complexity: O(n), Space Complexity: O(1).
 
+**Walkthrough:** Using `arr = [1, 3, 5, 6], x = 2`.
+- `i=0`: `1>=2`? No. `i=1`: `3>=2`? Yes → return `1`.
+Returned value `1` matches the expected output.
+
+---
+
 **Optimized Approach:** The search insert position is exactly the **lower bound** of `x` in the array — the first index where `arr[index] >= x`. We reuse the lower bound binary search logic from Problem 2 directly.
+
+**Logic (Steps):**
+1. Initialize `low = 0`, `high = n - 1`, `ans = n`.
+2. While `low <= high`, compute `mid = low + (high - low) / 2`.
+3. If `arr[mid] >= x`, record `ans = mid` and search left (`high = mid - 1`).
+4. Otherwise, discard the left half (`low = mid + 1`).
+5. Return `ans`, which is the target's index if found, or its correct insert position otherwise.
 
 ```csharp
 public class Solution
@@ -287,7 +360,11 @@ public class Solution
 
 Time Complexity: O(log n), Space Complexity: O(1).
 
-**Explanation:** Because "search insert position" and "lower bound" are the same concept — the first index whose value is `>= x` — the binary search dry run behaves exactly like Problem 2. For `arr = [1, 3, 5, 6], x = 2`: `low=0, high=3, mid=1` → `arr[1]=3 >= 2` → `ans=1, high=0`; `low=0, high=0, mid=0` → `arr[0]=1 < 2` → `low=1`; loop ends since `low > high`. Final answer: `1`.
+**Walkthrough:** For `arr = [1, 3, 5, 6], x = 2`:
+- `low=0, high=3, mid=1`: `arr[1]=3 >= 2` → `ans=1`, `high=0`.
+- `low=0, high=0, mid=0`: `arr[0]=1 < 2` → `low=1`.
+- Loop ends (`low > high`).
+Final `ans = 1`, matching the expected output.
 
 ---
 
@@ -301,6 +378,13 @@ Time Complexity: O(log n), Space Complexity: O(1).
 - Explanation: The largest value `<= 7` is `5`; the smallest value `>= 7` is `8`.
 
 **Brute Force Approach:** Traverse the array once, tracking the largest value seen so far that is `<= x` (floor) and the first value encountered that is `>= x` (ceil).
+
+**Logic (Steps):**
+1. Initialize `floor = -1`, `ceil = -1`.
+2. Loop through each `arr[i]`.
+3. If `arr[i] <= x`, keep overwriting `floor = arr[i]` (the last such value seen is the largest one `<= x`).
+4. If `arr[i] >= x` and `ceil` hasn't been set yet, set `ceil = arr[i]` (the first such value is the smallest one `>= x`).
+5. Return `(floor, ceil)` after the loop.
 
 ```csharp
 public class Solution
@@ -328,7 +412,20 @@ public class Solution
 
 Time Complexity: O(n), Space Complexity: O(1).
 
+**Walkthrough:** Using `arr = [3, 4, 4, 4, 5, 8, 10], x = 7`.
+- Scanning left to right: `floor` gets updated to `3, 4, 4, 4, 5` (last one `<= 7` is `5`).
+- `ceil` is set the first time `arr[i] >= 7`, which is `8`.
+Returned `(Floor, Ceil) = (5, 8)`, matching the expected output.
+
+---
+
 **Optimized Approach:** Ceil is the value at the **lower bound** index of `x` (first element `>= x`). Floor is the value just before the **upper bound** index of `x` (last element `<= x`, i.e., one position before the first element `> x`). We can compute both with a single binary search each, reusing lower/upper bound ideas.
+
+**Logic (Steps):**
+1. `FindFloor`: initialize `low=0, high=n-1, ans=-1`; while `low<=high`, if `arr[mid] <= x`, record `ans = arr[mid]` as a candidate and move right (`low = mid+1`) to look for an even larger value still `<= x`; otherwise move left (`high = mid-1`).
+2. `FindCeil`: same pattern but with `arr[mid] >= x`, recording `ans = arr[mid]` and moving left (`high = mid-1`) to look for a smaller value still `>= x`; otherwise move right (`low = mid+1`).
+3. Call `FindFloor(arr, x)` and `FindCeil(arr, x)` independently, each in `O(log n)`.
+4. Return the pair `(floor, ceil)`.
 
 ```csharp
 public class Solution
@@ -390,7 +487,10 @@ public class Solution
 
 Time Complexity: O(log n) (two binary searches, each O(log n)), Space Complexity: O(1).
 
-**Explanation:** `FindCeil` is structurally identical to the lower bound binary search from Problem 2 (just returning the value instead of the index), and `FindFloor` is its mirror image. On `arr = [3, 4, 4, 4, 5, 8, 10], x = 7`: for ceil, `mid=3 (arr=4) < 7 → low=4`; `mid=5 (arr=8) >= 7 → ans=8, high=4`; `mid=4 (arr=5) < 7 → low=5`; loop ends, ceil `= 8`. For floor, `mid=3 (arr=4) <= 7 → ans=4, low=4`; `mid=5 (arr=8) > 7 → high=4`; `mid=4 (arr=5) <= 7 → ans=5, low=5`; loop ends since `low > high`, floor `= 5`.
+**Walkthrough:** On `arr = [3, 4, 4, 4, 5, 8, 10], x = 7`:
+- Ceil search: `mid=3` (`arr=4`, not `>=7`) → `low=4`; `mid=5` (`arr=8>=7`) → `ans=8`, `high=4`; `mid=4` (`arr=5`, not `>=7`) → `low=5`; loop ends, ceil `= 8`.
+- Floor search: `mid=3` (`arr=4<=7`) → `ans=4`, `low=4`; `mid=5` (`arr=8`, not `<=7`) → `high=4`; `mid=4` (`arr=5<=7`) → `ans=5`, `low=5`; loop ends (`low>high`), floor `= 5`.
+Returned `(Floor, Ceil) = (5, 8)`, matching the expected output.
 
 ---
 
@@ -404,6 +504,13 @@ Time Complexity: O(log n) (two binary searches, each O(log n)), Space Complexity
 - Explanation: `4` first appears at index `1` and last appears at index `3`.
 
 **Brute Force Approach:** Scan the whole array once, recording the first index where `arr[i] == x` and continuously updating the last index where `arr[i] == x`.
+
+**Logic (Steps):**
+1. Initialize `first = -1`, `last = -1`.
+2. Loop through each index `i`.
+3. If `arr[i] == x`, set `first = i` only if it hasn't been set yet (first match wins).
+4. Regardless, keep overwriting `last = i` on every match (the final match wins).
+5. Return `(first, last)` after the loop.
 
 ```csharp
 public class Solution
@@ -431,7 +538,20 @@ public class Solution
 
 Time Complexity: O(n), Space Complexity: O(1).
 
+**Walkthrough:** Using `arr = [3, 4, 4, 4, 5, 8, 10], x = 4`.
+- `i=1`: `arr[1]=4==4` → `first=1`, `last=1`. `i=2`: match → `last=2`. `i=3`: match → `last=3`.
+Returned `(First, Last) = (1, 3)`, matching the expected output.
+
+---
+
 **Optimized Approach:** The first occurrence of `x` is exactly the **lower bound** index of `x` (provided that index actually holds `x`). The last occurrence is exactly one position before the **upper bound** index of `x` (i.e., `upperBound(x) - 1`). We reuse the lower bound / upper bound logic from Problems 2 and 3.
+
+**Logic (Steps):**
+1. Compute `lb = LowerBound(arr, x)` — the first index with `arr[index] >= x`.
+2. If `lb == n` or `arr[lb] != x`, `x` isn't present, so return `(-1, -1)`.
+3. Otherwise compute `ub = UpperBound(arr, x)` — the first index with `arr[index] > x`.
+4. The last occurrence is `last = ub - 1` (the position right before the first element greater than `x`).
+5. Return `(lb, last)`.
 
 ```csharp
 public class Solution
@@ -500,21 +620,10 @@ public class Solution
 
 Time Complexity: O(log n) (two binary searches back to back), Space Complexity: O(1).
 
-**Explanation:** Dry run on `arr = [3, 4, 4, 4, 5, 8, 10], x = 4` (indices 0..6):
-
-*Lower bound (first occurrence):*
-- `low = 0, high = 6, mid = 3`. `arr[3] = 4 >= 4` → `ans = 3, high = 2`.
-- `low = 0, high = 2, mid = 1`. `arr[1] = 4 >= 4` → `ans = 1, high = 0`.
-- `low = 0, high = 0, mid = 0`. `arr[0] = 3 < 4` → `low = 1`.
-- Loop ends (`low = 1 > high = 0`). Lower bound `= 1`, and `arr[1] == 4`, so `first = 1`.
-
-*Upper bound (to derive last occurrence):*
-- `low = 0, high = 6, mid = 3`. `arr[3] = 4`, not `> 4` → `low = 4`.
-- `low = 4, high = 6, mid = 5`. `arr[5] = 8 > 4` → `ans = 5, high = 4`.
-- `low = 4, high = 4, mid = 4`. `arr[4] = 5 > 4` → `ans = 4, high = 3`.
-- Loop ends (`low = 4 > high = 3`). Upper bound `= 4`, so `last = 4 - 1 = 3`.
-
-Final result: `First = 1, Last = 3`, matching the expected output — and computed using only two O(log n) binary searches instead of a full O(n) scan.
+**Walkthrough:** Dry run on `arr = [3, 4, 4, 4, 5, 8, 10], x = 4` (indices 0..6):
+- Lower bound: `mid=3` (`arr=4>=4`) → `ans=3, high=2`; `mid=1` (`arr=4>=4`) → `ans=1, high=0`; `mid=0` (`arr=3<4`) → `low=1`; loop ends. Lower bound `= 1`, and `arr[1]==4`, so `first=1`.
+- Upper bound: `mid=3` (`arr=4`, not `>4`) → `low=4`; `mid=5` (`arr=8>4`) → `ans=5, high=4`; `mid=4` (`arr=5>4`) → `ans=4, high=3`; loop ends. Upper bound `= 4`, so `last = 4-1 = 3`.
+Returned `(First, Last) = (1, 3)`, matching the expected output.
 
 ---
 
@@ -528,6 +637,12 @@ Final result: `First = 1, Last = 3`, matching the expected output — and comput
 - Explanation: `4` occurs at indices `1`, `2`, and `3`, i.e., 3 times.
 
 **Brute Force Approach:** Traverse the array once and increment a counter every time `arr[i] == x`.
+
+**Logic (Steps):**
+1. Initialize `count = 0`.
+2. Loop through each `arr[i]`.
+3. If `arr[i] == x`, increment `count`.
+4. Return `count` after the loop.
 
 ```csharp
 public class Solution
@@ -551,7 +666,19 @@ public class Solution
 
 Time Complexity: O(n), Space Complexity: O(1).
 
+**Walkthrough:** Using `arr = [3, 4, 4, 4, 5, 8, 10], x = 4`.
+- Matches occur at `i=1,2,3` → `count` increments three times to `3`.
+Returned value `3` matches the expected output.
+
+---
+
 **Optimized Approach:** The count of occurrences of `x` is simply `lastOccurrence - firstOccurrence + 1`. We directly reuse the first-and-last-occurrence logic from Problem 6, which itself is built on lower bound / upper bound.
+
+**Logic (Steps):**
+1. Compute `lb = LowerBound(arr, x)`.
+2. If `lb == n` or `arr[lb] != x`, `x` isn't present, so return `0`.
+3. Otherwise compute `ub = UpperBound(arr, x)` and `last = ub - 1`.
+4. Return `last - lb + 1` (the count of occurrences between first and last, inclusive).
 
 ```csharp
 public class Solution
@@ -620,4 +747,8 @@ public class Solution
 
 Time Complexity: O(log n) (two binary searches), Space Complexity: O(1).
 
-**Explanation:** Using the same example, `arr = [3, 4, 4, 4, 5, 8, 10], x = 4`, the lower bound binary search yields `first = 1` and the upper bound binary search yields `last = ub - 1 = 4 - 1 = 3` (exactly as dry-run in Problem 6). The count is therefore `last - first + 1 = 3 - 1 + 1 = 3`, matching the expected output. This approach avoids scanning all `n` elements and instead does the work in O(log n) time by building directly on the lower bound and upper bound routines.
+**Walkthrough:** Using `arr = [3, 4, 4, 4, 5, 8, 10], x = 4`:
+- `lb = LowerBound(arr, 4) = 1`.
+- `ub = UpperBound(arr, 4) = 4`, so `last = 4 - 1 = 3`.
+- Return `last - lb + 1 = 3 - 1 + 1 = 3`.
+Returned value `3` matches the expected output, computed in O(log n) instead of a full O(n) scan.

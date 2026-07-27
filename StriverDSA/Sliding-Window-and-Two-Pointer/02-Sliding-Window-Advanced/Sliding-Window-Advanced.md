@@ -55,6 +55,12 @@ For every pair of start and end indices, compute the subarray sum and check if i
 `goal`. This is O(n^2) time (or O(n^3) if sums are recomputed from scratch each time
 instead of incrementally).
 
+**Logic (Steps):**
+1. Fix a starting index `i` and reset a running `sum` to 0.
+2. Extend `j` from `i` to the end, adding `nums[j]` to `sum` incrementally.
+3. Whenever `sum == goal`, increment `count`.
+4. Repeat for every starting index `i`, giving the total count of subarrays summing to `goal`.
+
 ```csharp
 public int NumSubarraysWithSumBruteForce(int[] nums, int goal)
 {
@@ -87,6 +93,13 @@ Use the "at most K" trick: `exact(goal) = atMost(goal) - atMost(goal - 1)`. `AtM
 counts the number of subarrays whose sum is ≤ k, computed with a single sliding window that
 shrinks from the left whenever the window sum exceeds k. Special-case `k < 0` to return 0
 (needed when `goal == 0`).
+
+**Logic (Steps):**
+1. Return `AtMost(nums, goal) - AtMost(nums, goal - 1)` — the count of subarrays with sum exactly `goal`.
+2. Inside `AtMost(nums, k)`: if `k < 0`, return 0 immediately (no subarray can have a negative sum).
+3. Slide `right` forward, adding `nums[right]` to a running `sum`.
+4. While `sum > k`, shrink from the left: subtract `nums[left]` from `sum` and advance `left`, restoring the invariant `sum <= k`.
+5. For each `right`, every subarray starting anywhere in `[left, right]` and ending at `right` has sum `<= k`, so add `right - left + 1` to `count`.
 
 ```csharp
 public int NumSubarraysWithSum(int[] nums, int goal)
@@ -125,13 +138,7 @@ private int AtMost(int[] nums, int k)
 ```
 Time Complexity: O(n), Space Complexity: O(1).
 
-**Explanation:**
-`AtMost` slides a window and, for each right endpoint, counts all windows ending there whose
-sum stays ≤ k by shrinking the left edge whenever the sum overshoots. Subtracting
-`AtMost(goal - 1)` from `AtMost(goal)` removes all subarrays with sum strictly less than
-`goal`, leaving only subarrays whose sum is exactly `goal`. (A full dry run of this exact
-"at most" pattern is shown below for Problem 2, which uses the identical mechanics on odd
-counts instead of sums.)
+**Walkthrough:** On `nums = [1,0,1,0,1]`, `goal = 2`, compute `AtMost(nums, 2) - AtMost(nums, 1)`. For `AtMost(nums, 2)`: `right=0..3` keep `sum<=2` with no shrink, contributing `1+2+3+4=10` to `count`; at `right=4`, `sum=3>2` forces one shrink (`left=1`, `sum=2`), contributing `4` more, giving `AtMost(2)=14`. For `AtMost(nums, 1)`: `right=0,1` contribute `1+2=3`; at `right=2`, `sum=2>1` shrinks once (`left=1`), contributing `2`; at `right=3`, `sum=1<=1`, contributing `3`; at `right=4`, `sum=2>1` shrinks twice (`left=3`), contributing `2`; total `AtMost(1)=10`. Final result: `14 - 10 = 4`, matching the expected output. (A full dry run of this exact "at most" pattern is shown below for Problem 2, which uses the identical mechanics on odd counts instead of sums.)
 
 ---
 
@@ -148,6 +155,12 @@ contains exactly `k` odd numbers. Return the number of nice subarrays.
 
 **Brute Force Approach:**
 For every subarray, count how many odd numbers it contains and compare to `k`.
+
+**Logic (Steps):**
+1. Fix a starting index `i` and reset `oddCount` to 0.
+2. Extend `j` from `i` to the end, incrementing `oddCount` whenever `nums[j]` is odd.
+3. Whenever `oddCount == k`, increment `count` (the subarray `nums[i..j]` has exactly `k` odd numbers).
+4. Repeat for every starting index `i`.
 
 ```csharp
 public int NumberOfSubarraysBruteForce(int[] nums, int k)
@@ -180,6 +193,13 @@ Time Complexity: O(n^2). Space Complexity: O(1).
 Apply the "at most K" trick again: `exact(k) = atMost(k) - atMost(k - 1)`, where
 `AtMost(nums, k)` counts subarrays containing at most `k` odd numbers, using a sliding
 window that shrinks whenever the odd count exceeds `k`.
+
+**Logic (Steps):**
+1. Return `AtMostOdd(nums, k) - AtMostOdd(nums, k - 1)` — the count of subarrays with exactly `k` odd numbers.
+2. Inside `AtMostOdd(nums, k)`: if `k < 0`, return 0 immediately.
+3. Slide `right` forward, incrementing `oddCount` whenever `nums[right]` is odd.
+4. While `oddCount > k`, shrink from the left: if `nums[left]` is odd, decrement `oddCount`, then advance `left`, until `oddCount <= k` again.
+5. For each `right`, add `right - left + 1` to `count` — every subarray ending at `right` and starting in `[left, right]` has at most `k` odd numbers.
 
 ```csharp
 public int NumberOfSubarrays(int[] nums, int k)
@@ -222,35 +242,10 @@ private int AtMostOdd(int[] nums, int k)
 ```
 Time Complexity: O(n), Space Complexity: O(1).
 
-**Explanation (dry run on `nums = [1,1,2,1,1]`, `k = 3`):**
-
-We need `AtMostOdd(nums, 3) - AtMostOdd(nums, 2)`.
-
-*Computing `AtMostOdd(nums, 3)`:*
-| right | nums[right] | oddCount | window shrinks? | left | count += (right-left+1) | running count |
-|---|---|---|---|---|---|---|
-| 0 | 1 | 1 | no | 0 | +1 | 1 |
-| 1 | 1 | 2 | no | 0 | +2 | 3 |
-| 2 | 2 | 2 | no | 0 | +3 | 6 |
-| 3 | 1 | 3 | no | 0 | +4 | 10 |
-| 4 | 1 | 4 | yes → remove nums[0]=1 (odd), oddCount=3, left=1 | 1 | +4 (right-left+1=4-1+1) | 14 |
-
-`AtMostOdd(nums, 3) = 14`.
-
-*Computing `AtMostOdd(nums, 2)`:*
-| right | nums[right] | oddCount | shrinks? | left | count += | running count |
-|---|---|---|---|---|---|---|
-| 0 | 1 | 1 | no | 0 | +1 | 1 |
-| 1 | 1 | 2 | no | 0 | +2 | 3 |
-| 2 | 2 | 2 | no | 0 | +3 | 6 |
-| 3 | 1 | 3 | yes → remove nums[0]=1, oddCount=2, left=1 | 1 | +3 (3-1+1) | 9 |
-| 4 | 1 | 3 | yes → remove nums[1]=1, oddCount=2, left=2 | 2 | +3 (4-2+1) | 12 |
-
-`AtMostOdd(nums, 2) = 12`.
-
-Result: `14 - 12 = 2`, matching the expected output. The 2 nice subarrays
-(`[1,1,2,1]` at indices 0..3, and `[1,2,1,1]` at indices 1..4) are exactly the ones with
-odd-count 3 that get included in the "at most 3" count but excluded from the "at most 2" count.
+**Walkthrough:** On `nums = [1,1,2,1,1]`, `k = 3`, compute `AtMostOdd(nums, 3) - AtMostOdd(nums, 2)`.
+For `AtMostOdd(nums, 3)`: `right=0..3` never exceed `oddCount=3`, contributing `1+2+3+4=10`; at `right=4`, `oddCount=4>3` forces one shrink (`left=1`, `oddCount=3`), contributing `4` more, giving `AtMostOdd(3)=14`.
+For `AtMostOdd(nums, 2)`: `right=0,1` contribute `1+2=3`; at `right=2` (even number) `oddCount` stays 2, contributing `3` (total 6); at `right=3`, `oddCount=3>2` shrinks once (`left=1`), contributing `3` (total 9); at `right=4`, `oddCount=3>2` shrinks again (`left=2`), contributing `3`, giving `AtMostOdd(2)=12`.
+Result: `14 - 12 = 2`, matching the expected output — the 2 nice subarrays are `[1,1,2,1]` (indices 0..3) and `[1,2,1,1]` (indices 1..4), each with exactly 3 odd numbers.
 
 ---
 
@@ -269,6 +264,12 @@ substrings that contain at least one occurrence of all three characters.
 
 **Brute Force Approach:**
 Check every substring and verify it contains all three characters using a frequency count.
+
+**Logic (Steps):**
+1. Fix a starting index `i` and reset a `HashSet<char> seen`.
+2. Extend `j` from `i` to the end, adding `s[j]` to `seen`.
+3. Whenever `seen` contains `'a'`, `'b'`, and `'c'`, increment `count` (the substring `s[i..j]` is valid).
+4. Repeat for every starting index `i`.
 
 ```csharp
 public int NumberOfSubstringsBruteForce(string s)
@@ -294,6 +295,10 @@ public int NumberOfSubstringsBruteForce(string s)
 ```
 Time Complexity: O(n^2). Space Complexity: O(1) (at most 3 distinct chars tracked).
 
+**Walkthrough:** On `s = "abcabc"`: starting at `i=0`, the substring becomes valid (contains a, b, c) once `j=2` (`"abc"`), and stays valid for every `j` from 2 to 5, contributing 4 valid substrings. Starting at `i=1,2,3` similarly become valid once all three letters reappear within the remaining suffix, contributing more counts, while `i=4,5` can never contain all three (too few characters left). Summing across all starting indices gives `count = 10`, matching the expected output.
+
+---
+
 **Optimized Approach:**
 Maintain a frequency map of the 3 characters within a sliding window `[left, right]`. Expand
 `right` one character at a time; whenever the window contains at least one of each of 'a',
@@ -306,6 +311,13 @@ shrinking from the left as far as possible while remaining valid, then everythin
 left of that boundary still contains all 3 chars). So for each `right`, add `left + 1` to
 the count (number of valid starting points from index 0 to `left`), where `left` is
 advanced as far right as possible while the window remains valid.
+
+**Logic (Steps):**
+1. Maintain `freq`, a count of `'a'`, `'b'`, `'c'` currently in the window `[left, right]`.
+2. Move `right` forward, incrementing `freq[s[right]]`.
+3. While the window contains at least one of each of `'a'`, `'b'`, `'c'`, every substring ending anywhere from `right` to the end of `s` and starting at the current `left` is valid, so add `s.Length - right` to `count`.
+4. Then shrink: decrement `freq[s[left]]` and advance `left`, and re-check the while condition — this greedily pushes `left` as far right as possible while the window stays valid, counting each valid `left` position once.
+5. Repeat until `right` reaches the end of the string.
 
 ```csharp
 public int NumberOfSubstrings(string s)
@@ -335,15 +347,7 @@ public int NumberOfSubstrings(string s)
 ```
 Time Complexity: O(n), Space Complexity: O(1) (fixed 3-character map).
 
-**Explanation:**
-For a fixed `left`, once `[left, right]` contains all 3 characters, then `[left, right]`,
-`[left, right+1]`, ..., `[left, n-1]` are ALL valid too (extending right only keeps all
-characters present). That is exactly `s.Length - right` valid substrings starting at
-`left`. We then increment `left` (shrinking the window) and repeat the check — if the
-window is still valid after removing `s[left]`, we add another batch of `s.Length - right`
-for the new `left`, and keep shrinking until the window no longer contains all three
-characters, at which point we resume expanding `right`. This way every valid substring is
-counted exactly once, in O(n) total work since `left` only moves forward.
+**Walkthrough:** Dry run on `s = "abcabc"`. `right=0,1` (`'a'`,`'b'`) don't yet complete all 3 letters. `right=2` (`'c'`): `freq={a:1,b:1,c:1}`, all present → `count += 6-2 = 4` (count=4); shrink removes `s[0]='a'` (`freq[a]=0`, `left=1`), no longer all present, stop. `right=3` (`'a'`): `freq={a:1,b:1,c:1}` again all present → `count += 6-3 = 3` (count=7); shrink removes `s[1]='b'` (`left=2`), stop. `right=4` (`'b'`): all present → `count += 6-4 = 2` (count=9); shrink removes `s[2]='c'` (`left=3`), stop. `right=5` (`'c'`): all present → `count += 6-5 = 1` (count=10); shrink removes `s[3]='a'` (`left=4`), stop. Loop ends with `count = 10`, matching the expected output.
 
 ---
 
@@ -365,6 +369,13 @@ obtain.
 Try every way to split `k` cards between `i` taken from the front and `k - i` taken from
 the back (`i` from 0 to k), summing each combination directly (recomputing sums from
 scratch each time).
+
+**Logic (Steps):**
+1. Try every split `i` from `0` to `k`: take `i` cards from the front and `k - i` cards from the back.
+2. Sum the first `i` elements (`cardPoints[0..i-1]`).
+3. Sum the last `k - i` elements (`cardPoints[n-1] down to n-(k-i)`).
+4. Track `best`, the maximum total across all splits.
+5. Repeat for every split, giving the best achievable score.
 
 ```csharp
 public int MaxScoreBruteForce(int[] cardPoints, int k)
@@ -396,6 +407,10 @@ public int MaxScoreBruteForce(int[] cardPoints, int k)
 ```
 Time Complexity: O(k^2) (or O(n*k) if k close to n). Space Complexity: O(1).
 
+**Walkthrough:** On `cardPoints = [1,2,3,4,5,6,1]`, `k = 3`: `i=0` (0 front, 3 back) → back = `5+6+1=12`, total 12. `i=1` (1 front, 2 back) → front=1, back=`6+1=7`, total 8. `i=2` (2 front, 1 back) → front=`1+2=3`, back=`1`, total 4. `i=3` (3 front, 0 back) → front=`1+2+3=6`, total 6. The best across all splits is `12`, matching the expected output.
+
+---
+
 **Optimized Approach:**
 Picking `k` cards total from the two ends is equivalent to REMOVING a contiguous subarray
 of length `n - k` from the middle and keeping the rest. So:
@@ -407,6 +422,13 @@ maxScore = totalSum - minimumSumOfWindowOfSize(n - k)
 We compute the total sum once, then slide a fixed-size window of length `n - k` across the
 array to find the minimum window sum; subtracting that minimum from the total gives the
 maximum sum of the remaining (front + back) cards.
+
+**Logic (Steps):**
+1. Handle the edge case `windowSize = n - k == 0` (taking all cards) by returning the total sum directly.
+2. Compute `totalSum`, the sum of the entire array.
+3. Compute the sum of the first `windowSize` elements as the initial `windowSum`, and set `minWindowSum = windowSum`.
+4. Slide the fixed-size window rightward one element at a time: add the incoming element `cardPoints[right]` and subtract the outgoing element `cardPoints[right - windowSize]`, updating `minWindowSum` whenever a smaller sum is found.
+5. Return `totalSum - minWindowSum` — minimizing the untaken middle block maximizes the picked front+back cards.
 
 ```csharp
 public int MaxScore(int[] cardPoints, int k)
@@ -450,13 +472,7 @@ public int MaxScore(int[] cardPoints, int k)
 ```
 Time Complexity: O(n), Space Complexity: O(1).
 
-**Explanation:**
-Any selection of `k` cards from the two ends leaves behind a single contiguous block of
-`n - k` untaken cards in the middle. To maximize the picked sum, we must minimize the sum
-of that leftover middle block. We slide a fixed window of size `n - k` across the array
-(classic fixed-size sliding window: add the incoming element, subtract the outgoing
-element) to find the minimum possible middle-block sum, then `totalSum - minWindowSum`
-gives the best achievable score.
+**Walkthrough:** On `cardPoints = [1,2,3,4,5,6,1]`, `k = 3`, `n = 7`, so `windowSize = 4`. `totalSum = 22`. The initial window `cardPoints[0..3] = [1,2,3,4]` has sum `10`, so `minWindowSum = 10`. Sliding: `right=4` → `windowSum += cardPoints[4]-cardPoints[0] = 5-1 = 4`, new sum `14` (not smaller). `right=5` → `windowSum += cardPoints[5]-cardPoints[1] = 6-2 = 4`, new sum `18` (not smaller). `right=6` → `windowSum += cardPoints[6]-cardPoints[2] = 1-3 = -2`, new sum `16` (not smaller). `minWindowSum` stays `10`. Result: `totalSum - minWindowSum = 22 - 10 = 12`, matching the expected output.
 
 ---
 
@@ -477,6 +493,12 @@ where a good subarray has exactly `k` different integers in it.
 **Brute Force Approach:**
 For every subarray, use a hash set (or frequency map) to count distinct integers and
 compare to `k`.
+
+**Logic (Steps):**
+1. Fix a starting index `i` and reset a `HashSet<int> seen`.
+2. Extend `j` from `i` to the end, adding `nums[j]` to `seen`.
+3. If `seen.Count == k`, increment `count`; if `seen.Count > k`, break (extending further can only add more distinct values).
+4. Repeat for every starting index `i`.
 
 ```csharp
 public int SubarraysWithKDistinctBruteForce(int[] nums, int k)
@@ -506,10 +528,21 @@ public int SubarraysWithKDistinctBruteForce(int[] nums, int k)
 ```
 Time Complexity: O(n^2). Space Complexity: O(n) worst case for the set.
 
+**Walkthrough:** On `nums = [1,2,1,2,3]`, `k = 2`: `i=0` gives valid subarrays at `j=1,2,3` (3 hits, `count=3`) before `j=4` introduces a third distinct value and breaks. `i=1` gives hits at `j=2,3` (`count=5`). `i=2` gives a hit at `j=3` (`count=6`). `i=3` gives a hit at `j=4` (`count=7`). `i=4` alone never reaches 2 distinct values. Final `count = 7`, matching the expected output.
+
+---
+
 **Optimized Approach:**
 Same "at most K" trick: `exact(k) = atMost(k) - atMost(k - 1)`, where `AtMost(nums, k)`
 counts subarrays with at most `k` distinct integers using a frequency map and a sliding
 window that shrinks whenever the number of distinct integers exceeds `k`.
+
+**Logic (Steps):**
+1. Return `AtMostKDistinct(nums, k) - AtMostKDistinct(nums, k - 1)` — the count of subarrays with exactly `k` distinct integers.
+2. Inside `AtMostKDistinct(nums, k)`: if `k < 0`, return 0 immediately.
+3. Slide `right` forward, incrementing `freq[nums[right]]` (adding a new key if needed).
+4. While `freq.Count > k`, shrink from the left: decrement `freq[nums[left]]`, remove the key if it hits 0, then advance `left`, until `freq.Count <= k` again.
+5. For each `right`, add `right - left + 1` to `count`.
 
 ```csharp
 public int SubarraysWithKDistinct(int[] nums, int k)
@@ -554,13 +587,7 @@ private int AtMostKDistinct(int[] nums, int k)
 ```
 Time Complexity: O(n), Space Complexity: O(K) for the frequency map.
 
-**Explanation:**
-`AtMostKDistinct` uses the standard variable-size window: expand `right`, and whenever the
-number of distinct keys in `freq` exceeds `k`, shrink from `left` (decrementing/removing
-counts) until it's back to at most `k` distinct values. For each `right`, `right - left + 1`
-counts all valid windows ending at `right`. Subtracting `AtMost(k-1)` from `AtMost(k)`
-isolates subarrays with exactly `k` distinct integers, using the same reasoning as
-Problems 1 and 2.
+**Walkthrough:** On `nums = [1,2,1,2,3]`, `k = 2`, compute `AtMostKDistinct(nums, 2) - AtMostKDistinct(nums, 1)`. For `AtMost(2)`: `right=0..3` never exceed 2 distinct keys, contributing `1+2+3+4=10`; at `right=4`, a third key (`3`) appears, forcing 3 shrinks down to `left=3`, contributing `2` more, giving `AtMost(2)=12`. For `AtMost(1)`: every `right` from 0 to 4 immediately exceeds 1 distinct key (except `right=0`), so `left` shrinks to keep exactly 1 key each time, contributing `1` at every step, giving `AtMost(1)=5`. Result: `12 - 5 = 7`, matching the expected output.
 
 ---
 
@@ -579,6 +606,13 @@ substring, return the empty string.
 **Brute Force Approach:**
 Check every substring of `s`, verify (via frequency counting) that it contains all
 characters of `t` with sufficient counts, and track the smallest one that qualifies.
+
+**Logic (Steps):**
+1. Try every substring `s[i..j]` by iterating over all `(i, j)` pairs.
+2. For each candidate, call `Contains` to build frequency maps `need` (from `t`) and `have` (from the candidate substring).
+3. The candidate is valid only if `have` meets or exceeds `need` for every character in `t`.
+4. Among all valid candidates, track the shortest one (`bestLen`, `best`).
+5. Return the shortest valid substring found, or the empty string if none qualifies.
 
 ```csharp
 public string MinWindowBruteForce(string s, string t)
@@ -635,12 +669,23 @@ private bool Contains(string window, string t)
 ```
 Time Complexity: O(n^3) (O(n^2) substrings, O(n) check each). Space Complexity: O(charset).
 
+**Walkthrough:** On `s = "ADOBECODEBANC"`, `t = "ABC"`: the brute force checks every substring `s[i..j]` for containing at least one `'A'`, `'B'`, and `'C'`. The first valid substring found while scanning is `"ADOBEC"` (indices 0-5, length 6). As `i` and `j` sweep further, shorter valid substrings are discovered, including `"CODEBA"` (length 6, tied) and eventually `"BANC"` (indices 9-12, length 4), which is never beaten by any other substring. `bestLen` ends at 4 with `best = "BANC"`, matching the expected output.
+
+---
+
 **Optimized Approach:**
 Classic two-pointer template with a `need` frequency map (built from `t`) and a `have`
 counter tracking how many distinct required characters currently satisfy their needed
 count. Expand `right` to include characters; once all required characters are satisfied
 ("have == need.Count distinct chars satisfied"), shrink `left` as far as possible while
 still valid, recording the smallest valid window along the way.
+
+**Logic (Steps):**
+1. Build `need`, a frequency map of every character in `t`; `required = need.Count` is the number of distinct characters that must be fully satisfied.
+2. Move `right` forward, incrementing `windowCounts[s[right]]`; whenever a character's count in the window first reaches its required count in `need`, increment `formed`.
+3. While `formed == required` (the window currently satisfies all of `t`), record the window if it's the smallest so far (`bestLen`, `bestStart`).
+4. Then shrink from the left: decrement `windowCounts[s[left]]`; if that drops a required character below its needed count, decrement `formed` (window becomes invalid) and stop shrinking; either way advance `left`.
+5. Repeat until `right` reaches the end of `s`, then return the smallest recorded window (or empty string if none was found).
 
 ```csharp
 public string MinWindow(string s, string t)
@@ -701,42 +746,7 @@ public string MinWindow(string s, string t)
 ```
 Time Complexity: O(|s| + |t|), Space Complexity: O(charset size of t).
 
-**Explanation (dry run of Minimum Window Substring on `s = "ADOBECODEBANC"`, `t = "ABC"`):**
-
-`need = {A:1, B:1, C:1}`, `required = 3`.
-
-- `right=0 ('A')`: windowCounts{A:1}. A matches need (1==1) → formed=1. formed(1) != required(3), no shrink.
-- `right=1 ('D')`: windowCounts{A:1,D:1}. D not in need. formed=1.
-- `right=2 ('O')`: windowCounts{...,O:1}. formed=1.
-- `right=3 ('B')`: windowCounts{...,B:1}. B matches (1==1) → formed=2.
-- `right=4 ('E')`: windowCounts{...,E:1}. formed=2.
-- `right=5 ('C')`: windowCounts{...,C:1}. C matches (1==1) → formed=3 = required!
-  - Window is now `s[0..5] = "ADOBEC"`, length 6. bestLen=6, bestStart=0.
-  - Shrink: remove s[0]='A'. windowCounts[A]=0 < need[A]=1 → formed=2. left=1.
-  - formed != required, stop shrinking.
-- `right=6 ('O')`: windowCounts O:2. formed=2.
-- `right=7 ('D')`: windowCounts D:2. formed=2.
-- `right=8 ('E')`: windowCounts E:2. formed=2.
-- `right=9 ('B')`: windowCounts B:2. B already satisfied, formed stays 2 (still only counts distinct-satisfied once)... but wait B was already counted; formed remains 2 since B was already "formed" — actually formed only increments the first time count reaches need; it's already been satisfied so formed stays at 2 here, but note A is currently NOT satisfied (windowCounts[A]=0), B and C were the two formed... let's recheck: after right=5 shrink, formed=2 means B and C are satisfied, A is not. At right=9, B count goes to 2 (still satisfied, formed unchanged=2).
-- `right=10 ('A')`: windowCounts A:1. A matches need(1==1) → formed=3 = required!
-  - Window is `s[1..10] = "DOBECODEBA"`, length 10. Not better than bestLen=6.
-  - Shrink: remove s[1]='D' (not in need). left=2. formed still 3 (D removal doesn't affect need).
-    - Window `s[2..10]="OBECODEBA"` length 9, still formed=3, check length 9 not better; keep shrinking.
-  - remove s[2]='O'. left=3. formed=3. Window `s[3..10]="BECODEBA"` length 8, not better.
-  - remove s[3]='B'. windowCounts[B]=1, still >= need[B]=1 → formed stays 3. left=4. Window `s[4..10]="ECODEBA"` length 7, not better.
-  - remove s[4]='E'. left=5. formed=3. Window `s[5..10]="CODEBA"` length 6, ties bestLen but not strictly less, so bestLen/bestStart unchanged (still 0,6) per `<` comparison.
-  - remove s[5]='C'. windowCounts[C]=0 < need[C]=1 → formed=2. left=6. Stop shrinking (formed != required).
-- `right=11 ('N')`: windowCounts N:1. Not in need. formed=2.
-- `right=12 ('C')`: windowCounts C:1. C matches (1==1) → formed=3 = required!
-  - Window `s[6..12] = "ODEBANC"`, length 7. Not better than 6.
-  - Shrink: remove s[6]='O'. left=7. formed=3 (O not in need). Window `s[7..12]="DEBANC"` length 6, ties, not strictly better.
-  - remove s[7]='D'. left=8. formed=3. Window `s[8..12]="EBANC"` length 5 < bestLen(6)! bestLen=5, bestStart=8.
-  - remove s[8]='E'. left=9. formed=3. Window `s[9..12]="BANC"` length 4 < 5! bestLen=4, bestStart=9.
-  - remove s[9]='B'. windowCounts[B]=0 < need[B]=1 → formed=2. left=10. Stop shrinking.
-- Loop ends (right reaches end of string).
-
-Final answer: `bestStart=9, bestLen=4` → `s.Substring(9,4) = "BANC"`, matching the expected
-output exactly.
+**Walkthrough:** On `s = "ADOBECODEBANC"`, `t = "ABC"`: `need = {A:1,B:1,C:1}`, `required = 3`. Scanning forward, `formed` reaches `required` first at `right=5` (`'C'`), giving window `"ADOBEC"` (length 6) → `bestLen=6, bestStart=0`; shrinking removes `'A'` (`left=1`), which drops `formed` back to 2. Expanding again, `formed` reaches 3 next at `right=10` (`'A'`), giving window `s[1..10]="DOBECODEBA"` (length 10, not better); shrinking removes non-required and required characters down to `s[5..10]="CODEBA"` (length 6, ties but not strictly smaller) before removing `'C'` drops `formed` to 2 (`left=6`). Expanding once more, `formed` reaches 3 at `right=12` (`'C'`), giving window `s[6..12]="ODEBANC"` (length 7); shrinking tightens it through `"DEBANC"` (6), `"EBANC"` (5, new best `bestLen=5, bestStart=8`), and `"BANC"` (4, new best `bestLen=4, bestStart=9`), before removing `'B'` drops `formed` to 2. The loop ends with `bestStart=9, bestLen=4` → `s.Substring(9,4) = "BANC"`, matching the expected output.
 
 ---
 
@@ -760,6 +770,12 @@ two-pointer technique.
 **Brute Force Approach:**
 For every possible starting index in `S`, and every possible ending index, check whether
 `T` is a subsequence of that substring, and track the minimum length window that works.
+
+**Logic (Steps):**
+1. Try every substring `s[i..j]` by iterating over all `(i, j)` pairs.
+2. For each candidate, call `IsSubsequence` to check whether `t`'s characters appear in order (not necessarily contiguously) within the candidate.
+3. If valid and shorter than the current best, update `bestLen`/`best`.
+4. Repeat for every `(i, j)` pair, returning the shortest valid window found.
 
 ```csharp
 public string MinWindowSubsequenceBruteForce(string s, string t)
@@ -799,6 +815,10 @@ private bool IsSubsequence(string t, string window)
 ```
 Time Complexity: O(n^2 * m) where n = |S|, m = |T|. Space Complexity: O(n) for substrings.
 
+**Walkthrough:** On `S = "abcdebdde"`, `T = "bde"`: every length-3 candidate (`"bcd"`, `"cde"`, `"deb"`, `"ebd"`, `"bdd"`, `"dde"`, ...) fails `IsSubsequence` because none contains `'b'` then `'d'` then `'e'` in that exact order. The candidate `"bcde"` (indices 1-4) does contain `b`, `d`, `e` in order (skipping `c`), so it's recorded as valid with length 4, and no shorter valid window exists. `best = "bcde"`, matching the expected output.
+
+---
+
 **Optimized Approach:**
 Use a specialized two-pointer "expand then contract" technique, run in a single left-to-right
 scan of `S`:
@@ -817,6 +837,13 @@ scan of `S`:
 This differs fundamentally from Minimum Window Substring because we cannot use a simple
 frequency map — order matters, so we must literally walk through characters matching them
 positionally, both forwards (to find *a* valid end) and backwards (to tighten the start).
+
+**Logic (Steps):**
+1. From the current `right`, run the expand phase: advance `right` through `s` and `ti` through `t`, matching characters in order until `ti` reaches `m` (all of `t` matched) or `s` runs out.
+2. If `s` ran out before matching all of `t`, no further candidates are possible — stop.
+3. Otherwise, run the contract phase: walk backward from `end = right`, matching `t` in reverse, to find the tightest `start` such that `t` is still a subsequence of `s[start..end]`.
+4. If `end - start + 1` beats the current best, record `bestStart`/`bestLen`.
+5. Resume the expand phase from `right = start + 1` (any better window must start after this tightest start), and repeat until `s` is exhausted.
 
 ```csharp
 public string MinWindowSubsequence(string s, string t)
@@ -882,22 +909,6 @@ scan up to n characters, but in practice this is efficient; the tight bound is O
 each contraction is bounded by needing to match m characters). Space Complexity: O(1)
 (excluding the output substring).
 
-**Explanation:**
-Because Minimum Window Subsequence requires `T` to appear as an ORDERED subsequence (not
-just "all characters present with sufficient counts" like Minimum Window Substring), a
-frequency-map `need`/`have` approach does not work — two windows could have identical
-character frequencies but only one might have them in the right order. Instead:
-- The **expand phase** greedily finds the earliest position where a subsequence match of
-  `T` completes, by scanning forward and advancing a pointer into `T` whenever the current
-  character of `S` matches the next needed character of `T`.
-- The **contract phase** then scans backward from that completion point, matching `T` in
-  reverse, to find the latest possible start such that `T` is still a subsequence of
-  `[start, end]`. This tightens the window as much as possible (removing any unnecessary
-  prefix characters that expand phase passed over but weren't strictly needed once we know
-  the exact end position).
-- After recording this candidate, the scan resumes expanding from `start + 1`, since any
-  smaller/better window must start after the current tightest start.
+**Walkthrough:** On `S = "abcdebdde"`, `T = "bde"` (`m=3`). First expand phase: scanning from `right=0`, characters match `t` in order at `s[1]='b'`, `s[3]='d'`, `s[4]='e'`, completing the subsequence at `end=4`. Contract phase walks backward from `end=4` matching `t` in reverse (`e` at 4, `d` at 3, `b` at 1 — `'c'` at index 2 is skipped since it's not needed), giving `start=1`. Window `s[1..4]="bcde"`, length 4 → `bestLen=4, bestStart=1`. Resuming from `right=start+1=2`, the next expand phase completes another match at `end=8` (`s[5]='b'`, `s[6]='d'`, `s[8]='e'`), and its contract phase gives `start=5`, window `s[5..8]="bdde"`, length 4 — a tie, not strictly smaller, so the best stays unchanged. Resuming from `right=6`, no further match of `t` completes before `S` runs out, so the scan stops. Final answer: `bestStart=1, bestLen=4` → `s.Substring(1,4) = "bcde"`, matching the expected output.
 
-This guarantees we examine every minimal candidate window efficiently without needing to
-re-scan all of `S` from scratch for each candidate, avoiding the O(n^2 * m) blowup of the
-brute-force approach.
+---

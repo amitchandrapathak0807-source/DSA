@@ -15,6 +15,12 @@ Given an array of integers containing an equal number of positive and negative n
 **Brute Force Approach:**
 Traverse the array once and collect all positive numbers into one list and all negative numbers into another list, preserving their relative order. Then create the result array and place positive numbers at even indices (0, 2, 4, ...) and negative numbers at odd indices (1, 3, 5, ...), copying from the two lists in order.
 
+**Logic (Steps):**
+1. Traverse `nums` once, appending positives to a `positives` list and negatives to a `negatives` list, preserving order.
+2. Create a `result` list of the same length as `nums`.
+3. Walk index `i` from `0` to `n-1`: if `i` is even, take the next value from `positives`; if odd, take the next from `negatives`.
+4. Return `result`.
+
 ```csharp
 public List<int> RearrangeBrute(int[] nums)
 {
@@ -49,8 +55,18 @@ public List<int> RearrangeBrute(int[] nums)
 **Time Complexity:** O(n) — one pass to separate positives/negatives, another pass to merge them back. Two linear passes still amount to O(n).
 **Space Complexity:** O(n) — two auxiliary lists (`positives`, `negatives`) plus the result list, each of size up to n.
 
+**Walkthrough:** For `nums = [3, 1, -2, -5, 2, -4]`: `positives = [3, 1, 2]`, `negatives = [-2, -5, -4]`. Filling `result`: index 0 (even) → `3`, index 1 (odd) → `-2`, index 2 → `1`, index 3 → `-5`, index 4 → `2`, index 5 → `-4` → `[3, -2, 1, -5, 2, -4]` ✔ matches the stable-interleave Output.
+
+---
+
 **Optimized Approach:**
 Since the array is guaranteed to have an equal number of positive and negative elements, we can build the answer in a single pass using two pointers: `posIndex` starting at 0 (next even slot for a positive number) and `negIndex` starting at 1 (next odd slot for a negative number). We scan the original array once; whenever we see a positive number we place it at `posIndex` and advance `posIndex` by 2, and whenever we see a negative number we place it at `negIndex` and advance `negIndex` by 2. This avoids the two separate auxiliary lists of the brute force and does it in one pass while still preserving relative order.
+
+**Logic (Steps):**
+1. Initialize `posIndex = 0` and `negIndex = 1`.
+2. Scan `nums` once; for each positive value, place it at `result[posIndex]` and advance `posIndex` by 2.
+3. For each negative value, place it at `result[negIndex]` and advance `negIndex` by 2.
+4. Return `result`.
 
 ```csharp
 public int[] RearrangeOptimized(int[] nums)
@@ -81,8 +97,10 @@ public int[] RearrangeOptimized(int[] nums)
 **Time Complexity:** O(n) — a single pass through the input array, with O(1) work per element.
 **Space Complexity:** O(n) — only the output array is used as extra space (required since we must return a new arrangement); no intermediate lists are needed.
 
-**Explanation:**
-The optimized approach works because we know in advance exactly where each positive and negative number should land: positives always go to even indices (0, 2, 4, ...) and negatives always go to odd indices (1, 3, 5, ...), and since counts are equal there will be exactly enough slots of each parity. By keeping two independent pointers that jump by 2 each time, we place each element directly into its final position in one left-to-right scan, which naturally preserves the relative order of positives among themselves and negatives among themselves — no need to separately collect and merge them.
+**Walkthrough:**
+The optimized approach works because we know in advance exactly where each positive and negative number should land: positives always go to even indices (0, 2, 4, ...) and negatives always go to odd indices (1, 3, 5, ...), and since counts are equal there will be exactly enough slots of each parity. By keeping two independent pointers that jump by 2 each time, we place each element directly into its final position in one left-to-right scan.
+
+For `nums = [3, 1, -2, -5, 2, -4]`, `posIndex=0, negIndex=1`: `3`→`result[0]=3`,`posIndex=2`; `1`→`result[2]=1`,`posIndex=4`; `-2`→`result[1]=-2`,`negIndex=3`; `-5`→`result[3]=-5`,`negIndex=5`; `2`→`result[4]=2`,`posIndex=6`; `-4`→`result[5]=-4`,`negIndex=7`. Final `result = [3, -2, 1, -5, 2, -4]` ✔ matches Output.
 
 ---
 
@@ -100,6 +118,12 @@ Given an array of integers representing a permutation, rearrange it into the lex
 
 **Brute Force Approach:**
 Generate all possible permutations of the array, sort them lexicographically, find the current permutation in that sorted list, and return the one immediately after it (wrapping around to the first/smallest if the current one is the last). This is conceptually simple but factorially expensive.
+
+**Logic (Steps):**
+1. Generate all permutations of `nums` via backtracking (`Permute`).
+2. Sort the list of permutations lexicographically.
+3. Locate the index of the current `nums` arrangement within the sorted list.
+4. Return the permutation right after it, wrapping to the first (smallest) if `nums` was the last permutation.
 
 ```csharp
 public void NextPermutationBrute(int[] nums)
@@ -169,8 +193,14 @@ private bool ArraysEqual(int[] a, int[] b)
 **Time Complexity:** O(n! · n) — generating all n! permutations takes O(n! · n), plus O(n! log n!) to sort them; overall dominated by the factorial blow-up.
 **Space Complexity:** O(n! · n) — storing every permutation of length n.
 
+**Walkthrough:** For `nums = [1, 2, 3]`: all permutations sorted lexicographically are `123, 132, 213, 231, 312, 321`. Current `123` is found at index 0, so the next one, `132`, is returned → `[1, 3, 2]` ✔ matches Output.
+
+---
+
 **Optimized Approach:**
-Use the classic in-place algorithm:
+Use the classic in-place algorithm involving a break point, a next-greater swap, and a suffix reversal.
+
+**Logic (Steps):**
 1. Scan from the right to find the first index `i` such that `nums[i] < nums[i + 1]` (the "break point" / pivot). This identifies the longest non-increasing suffix.
 2. If such an index exists, scan from the right again to find the smallest element in the suffix that is still greater than `nums[i]` (the "next greater" element), and swap it with `nums[i]`.
 3. Reverse the suffix starting at index `i + 1` to put it into ascending order (the smallest possible arrangement for that suffix), which yields the immediate next permutation. If no break point was found in step 1, the whole array is in descending order (it is the last permutation), so simply reverse the entire array to get the first (smallest) permutation.
@@ -223,8 +253,8 @@ private void Swap(int[] nums, int i, int j)
 **Time Complexity:** O(n) — each of the three steps (find break point, find next greater, reverse suffix) is a single linear scan over the array.
 **Space Complexity:** O(1) — the rearrangement is done in-place using only a constant number of extra variables.
 
-**Explanation:**
-Let's dry run with `nums = [2, 1, 5, 4, 3, 0, 0]`.
+**Walkthrough:**
+Let's dry run with `nums = [2, 1, 5, 4, 3, 0, 0]` (a second, more illustrative example than the base one, since it exercises all three steps clearly).
 
 Step 1 — Find the break point: We scan from the right comparing `nums[i]` with `nums[i+1]`, looking for the first place where the sequence stops being non-increasing (i.e., where `nums[i] < nums[i+1]`). Reading right to left: `0` vs `0` (not less), `0` vs `3` (not less, 0<3 is actually true — let's index carefully).
 
@@ -264,6 +294,12 @@ Given an array of integers, find all the "leader" elements. An element is a lead
 **Brute Force Approach:**
 For every element, check all elements to its right; if the current element is strictly greater than all of them, it is a leader. This uses two nested loops.
 
+**Logic (Steps):**
+1. For each index `i`, assume `isLeader = true`.
+2. Scan every index `j > i`; if `nums[j] >= nums[i]`, mark `isLeader = false` and stop the inner scan.
+3. If `isLeader` remains true after the inner scan, add `nums[i]` to the `leaders` list.
+4. Return `leaders` after processing every index.
+
 ```csharp
 public List<int> LeadersBrute(int[] nums)
 {
@@ -292,8 +328,18 @@ public List<int> LeadersBrute(int[] nums)
 **Time Complexity:** O(n^2) — for each of the n elements, we may scan up to n elements to its right in the worst case.
 **Space Complexity:** O(1) extra (excluding the output list) — no auxiliary data structures beyond the result.
 
+**Walkthrough:** For `nums = [10, 22, 12, 3, 0, 6]`: `10` has `22` to its right (not a leader); `22` beats everything after it (leader); `12` beats `3, 0, 6` (leader); `3` and `0` are beaten by `6`; `6` is last (leader) → `[22, 12, 6]` ✔ matches Output.
+
+---
+
 **Optimized Approach:**
 Traverse the array from right to left while keeping track of the maximum value seen so far (`maxSoFar`). The rightmost element is always a leader (initialize `maxSoFar` with it). For each element moving leftward, if the current element is strictly greater than `maxSoFar`, it is a leader; update `maxSoFar` to this element. Since we build the leaders while scanning right-to-left, we either insert at the front or collect them and reverse at the end to preserve left-to-right order in the output.
+
+**Logic (Steps):**
+1. Initialize `maxSoFar` with the last element and add it to `leaders` (it's always a leader).
+2. Scan from index `n-2` down to `0`.
+3. Whenever `nums[i] > maxSoFar`, add it to `leaders` and update `maxSoFar = nums[i]`.
+4. Reverse `leaders` at the end to restore left-to-right order, then return it.
 
 ```csharp
 public List<int> LeadersOptimized(int[] nums)
@@ -322,8 +368,10 @@ public List<int> LeadersOptimized(int[] nums)
 **Time Complexity:** O(n) — a single right-to-left pass through the array, with O(1) work per element (the final reverse is also O(n)).
 **Space Complexity:** O(1) extra (excluding the output list) — only a single `maxSoFar` variable is needed during the scan.
 
-**Explanation:**
-Scanning from the right lets us maintain a running maximum (`maxSoFar`) of everything we've already visited, which is exactly "everything to the right" of the current position. An element is a leader precisely when it beats this running maximum, so a single comparison per element replaces the inner loop of the brute force. Since leaders are discovered in right-to-left order, we either prepend them or (as done here) append and reverse at the end to present them in their natural left-to-right array order.
+**Walkthrough:**
+Scanning from the right lets us maintain a running maximum (`maxSoFar`) of everything we've already visited, which is exactly "everything to the right" of the current position. An element is a leader precisely when it beats this running maximum, so a single comparison per element replaces the inner loop of the brute force.
+
+For `nums = [10, 22, 12, 3, 0, 6]`: `maxSoFar=6`, `leaders=[6]`. `i=4: 0>6? No`. `i=3: 3>6? No`. `i=2: 12>6? Yes → leaders=[6,12], maxSoFar=12`. `i=1: 22>12? Yes → leaders=[6,12,22], maxSoFar=22`. `i=0: 10>22? No`. Reverse → `[22,12,6]` ✔ matches Output.
 
 ---
 

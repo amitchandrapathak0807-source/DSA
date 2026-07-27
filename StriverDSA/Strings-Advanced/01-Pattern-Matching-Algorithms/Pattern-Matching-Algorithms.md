@@ -15,6 +15,12 @@ Given a string `s` of length `n`, the Z-array (Z-function) is an array `Z` of le
 **Brute Force Approach:**
 Naive sliding-window comparison: for every starting index in `text`, compare characters of `pattern` one by one.
 
+**Logic (Steps):**
+1. Loop `i` from `0` to `n - m` (every possible starting position in `text`).
+2. For each `i`, reset `j = 0` and compare `text[i+j]` with `pattern[j]`, incrementing `j` while they match.
+3. If `j` reaches `m` (the full pattern matched), record `i` as a match.
+4. Move to the next `i` and repeat.
+
 ```csharp
 using System;
 using System.Collections.Generic;
@@ -47,9 +53,14 @@ public class PatternSearchBruteForce
 Time Complexity: O(n*m) — in the worst case (e.g. text = "aaaaa...a", pattern = "aaab") every starting position requires up to `m` comparisons.
 Space Complexity: O(1) extra (excluding the output list).
 
+**Walkthrough:** With `text = "aabaabaabab"`, `pattern = "aab"`: at `i=0`, `j` matches `'a','a','b'` all three, `j` reaches `m=3`, record `0`. At `i=1`, `text[1]='a'` vs `pattern[0]='a'` matches, `text[2]='b'` vs `pattern[1]='a'` mismatches, `j` stays at 1, no match. Continuing this way, matches are found at `i=0`, `3`, and `6`, giving the result `[0, 3, 6]` as stated in the Example.
+
+---
+
 **Optimized Approach:**
 Build the Z-array in O(n) using the `[l, r]` window (the "Z-box") technique, then use it for pattern matching:
 
+**Logic (Steps):**
 1. Maintain two pointers `l` and `r` representing the rightmost segment `[l, r]` found so far that matches a prefix of `s` (i.e., `s[l..r]` is also a prefix of `s`).
 2. For each index `i` from `1` to `n-1`:
    - If `i > r`: there is no overlap with any known Z-box, so start comparing `s[0]` with `s[i]` from scratch, incrementing until a mismatch. Set `Z[i]` accordingly, and if `Z[i] > 0`, update `l = i`, `r = i + Z[i] - 1`.
@@ -119,18 +130,9 @@ public class PatternSearchZFunction
 Time Complexity: O(n + m), where `n = text.Length` and `m = pattern.Length` — the Z-array of the combined string of length `n + m + 1` is built in linear time.
 Space Complexity: O(n + m) for the combined string and the Z-array.
 
-**Explanation:**
-Dry run of Z-array construction on `s = "aaaaa"` (n = 5, indices 0..4):
+**Walkthrough:** For `text="aabaabaabab"`, `pattern="aab"`: build `combined = pattern + "$" + text = "aab$aabaabaabab"`. Computing the Z-array of `combined`, e.g. on `s="aaaaa"` as a simpler illustration of the same mechanics: `i=1` has no window yet (`i>=r`), so compare directly from `s[0]`, extending to `z[1]=4` and setting `l=1, r=5`. `i=2` falls inside the window (`k=1`), candidate `=min(r-i, z[k])=min(3,4)=3`, extension attempt fails immediately, `z[2]=3`. Similarly `z[3]=2`, `z[4]=1`, giving Z-array `[_,4,3,2,1]`. Applying the same construction to `combined`, every position after the `$` where `Z[i]==pattern.Length(3)` marks a match; these occur at `text` offsets `0`, `3`, and `6`, giving the result `[0, 3, 6]`, matching the Example's Output.
 
-- `l = 0, r = 0`, `z[0]` unused (0 by default).
-- `i = 1`: `i >= r` (1 >= 0), so no window reuse. Compare `s[0]` vs `s[1]`: `'a'=='a'` → extend; `s[1]` vs `s[2]`... continues until index runs out. `z[1] = 4` (matches `s[1..4] = "aaaa"` against prefix `"aaaa"`). Since `i + z[i] = 5 > r = 0`, update `l = 1, r = 5`.
-- `i = 2`: `i < r` (2 < 5), `k = i - l = 1`. `z[k] = z[1] = 4`. Candidate `= min(r - i, z[k]) = min(5-2, 4) = min(3,4) = 3`. Try extending beyond: `z[2] + i = 2+3=5` which is `== n`, loop condition `i+z[i] < n` fails immediately, so `z[2] = 3`. Since `i + z[2] = 5 > r`? `5 > 5` false, so window stays `l=1, r=5`.
-- `i = 3`: `i < r` (3<5), `k = 2`, `z[k] = 3`. Candidate `= min(r-i, z[k]) = min(5-3,3) = min(2,3) = 2`. Extend attempt: `i+z[i]=3+2=5`, not `<5`, stop. `z[3] = 2`. `i+z[3]=5`, not `>r(5)`, window unchanged.
-- `i = 4`: `i < r`(4<5), `k=3`, `z[k]=2`. Candidate `= min(r-i, z[k]) = min(5-4,2)=min(1,2)=1`. Extend attempt: `i+z[i]=4+1=5`, not `<5`, stop. `z[4]=1`.
-
-Final Z-array: `[_, 4, 3, 2, 1]` — as expected, each suffix of an all-`'a'` string matches the prefix up to the remaining length.
-
-For pattern searching with `text="aabaabaabab"`, `pattern="aab"`: `combined = "aab$aabaabaabab"`. Scanning the Z-array of `combined` at positions after the `$`, we find `Z[i] == 3` at the three positions corresponding to `text` offsets `0`, `3`, and `6`, giving matches `[0, 3, 6]`.
+---
 
 ## 2. KMP Algorithm — Longest Prefix Suffix (LPS) Array and Pattern Searching
 
@@ -146,6 +148,12 @@ Given a `text` and a `pattern`, find all starting indices in `text` where `patte
 
 **Brute Force Approach:**
 Sliding-window naive comparison, identical in spirit to the brute-force approach used for the Z-function problem: try every alignment and compare character by character.
+
+**Logic (Steps):**
+1. Loop `i` from `0` to `n - m`, trying every alignment of `pattern` against `text`.
+2. For each `i`, compare characters `text[i+j]` and `pattern[j]` for increasing `j` until a mismatch or `j == m`.
+3. If `j == m`, the full pattern matched at `i`, so record `i`.
+4. Advance to the next `i` and repeat, with no reuse of prior comparisons.
 
 ```csharp
 using System;
@@ -179,7 +187,13 @@ public class KmpBruteForce
 Time Complexity: O(n*m) worst case.
 Space Complexity: O(1) extra.
 
+**Walkthrough:** With `text = "abxabcabcaby"`, `pattern = "abcaby"`: at `i=0`, `text[0]='a'` vs `pattern[0]='a'` matches, `text[1]='b'` vs `pattern[1]='b'` matches, `text[2]='x'` vs `pattern[2]='c'` mismatches, `j` stops at 2, no match. Trying each subsequent `i` similarly, the full pattern `"abcaby"` finally lines up starting at `i=6` (`text[6..11] = "abcaby"`), so `j` reaches `m=6` and `6` is recorded — matching the expected Output of index `6`.
+
+---
+
 **Optimized Approach:**
+
+**Logic (Steps):**
 1. **Build the LPS array** using a two-pointer technique:
    - `len` tracks the length of the current longest matching prefix-suffix; `i` scans the pattern starting at index 1.
    - If `pattern[i] == pattern[len]`, extend the match: `len++`, `lps[i] = len`, `i++`.
@@ -265,22 +279,9 @@ public class KmpOptimized
 Time Complexity: O(n + m) — LPS construction is O(m); the search phase is O(n) because the text pointer `i` never decreases and `j` is bounded by `i`.
 Space Complexity: O(m) for the LPS array.
 
-**Explanation:**
-Dry run of LPS construction on `pattern = "aabaaab"` (indices 0..6, m = 7):
+**Walkthrough:** For `pattern = "abcaby"`, `lps` is built by comparing `pattern[i]` against `pattern[len]`: `i=1` `'b'` vs `'a'`(len=0) mismatches → `lps[1]=0`; `i=2` `'c'` vs `'a'` mismatches → `lps[2]=0`; `i=3` `'a'` vs `'a'` matches → `len=1, lps[3]=1`; `i=4` `'b'` vs `pattern[1]='b'` matches → `len=2, lps[4]=2`; `i=5` `'y'` vs `pattern[2]='c'` mismatches, `len` falls back via `lps[1]=0`, retry `'y'` vs `'a'` mismatches → `lps[5]=0`. Final `lps = [0,0,0,1,2,0]`, matching the value stated in the Example. During the search phase over `text = "abxabcabcaby"`, pointers `i` and `j` advance together; mismatches make `j` jump via `lps[j-1]` without moving `i` backward, and the match is ultimately found when `j` reaches `m=6` at `i=12`, reporting `i-j=6` — the expected Output.
 
-- `lps[0] = 0` always. `len = 0, i = 1`.
-- `i=1`: `pattern[1]='a'`, `pattern[len=0]='a'` → match. `len=1`, `lps[1]=1`, `i=2`.
-- `i=2`: `pattern[2]='b'`, `pattern[len=1]='a'` → mismatch, `len!=0` → `len = lps[len-1] = lps[0] = 0`.
-- `i=2` (retry): `pattern[2]='b'`, `pattern[len=0]='a'` → mismatch, `len==0` → `lps[2]=0`, `i=3`.
-- `i=3`: `pattern[3]='a'`, `pattern[len=0]='a'` → match. `len=1`, `lps[3]=1`, `i=4`.
-- `i=4`: `pattern[4]='a'`, `pattern[len=1]='a'` → match. `len=2`, `lps[4]=2`, `i=5`.
-- `i=5`: `pattern[5]='a'`, `pattern[len=2]='b'` → mismatch, `len!=0` → `len = lps[1] = 1`.
-- `i=5` (retry): `pattern[5]='a'`, `pattern[len=1]='a'` → match. `len=2`, `lps[5]=2`, `i=6`.
-- `i=6`: `pattern[6]='b'`, `pattern[len=2]='b'` → match. `len=3`, `lps[6]=3`, `i=7`, loop ends.
-
-Final `lps = [0, 1, 0, 1, 2, 2, 3]`.
-
-During the search phase, whenever a mismatch occurs after partially matching `j` characters, `j` jumps to `lps[j-1]` instead of resetting to `0` and restarting comparison from `text[i-j+1]`, which is exactly what avoids re-scanning already-matched text characters.
+---
 
 ## 3. Minimum Characters Needed at the Front to Make a String a Palindrome (using the KMP failure function)
 
@@ -296,6 +297,12 @@ Given a string `s`, find the minimum number of characters that need to be added 
 
 **Brute Force Approach:**
 For each possible prefix length from longest to shortest, check whether that prefix is itself a palindrome; the first (longest) one found gives the answer.
+
+**Logic (Steps):**
+1. Loop `len` from `n` down to `1`.
+2. For each `len`, call `IsPalindrome(s, 0, len - 1)`, which checks characters from both ends inward.
+3. The first (longest) `len` for which the prefix is a palindrome gives the answer `n - len`.
+4. Return that value immediately once found.
 
 ```csharp
 using System;
@@ -331,8 +338,19 @@ public class MinCharsPalindromeBruteForce
 Time Complexity: O(n^2) — checking each of the `n` candidate prefixes for a palindrome costs up to O(n).
 Space Complexity: O(1) extra.
 
+**Walkthrough:** For `s = "abcd"` (n=4): try `len=4`, prefix `"abcd"`, `IsPalindrome` compares `'a'` vs `'d'` → false. Try `len=3`, prefix `"abc"`, compares `'a'` vs `'c'` → false. Try `len=2`, prefix `"ab"`, compares `'a'` vs `'b'` → false. Try `len=1`, prefix `"a"`, trivially a palindrome (single char) → true, return `n - len = 4 - 1 = 3`, matching the expected Output.
+
+---
+
 **Optimized Approach:**
 Use the KMP failure function (LPS array) trick: build the string `combined = s + "#" + reverse(s)`, where `#` is a separator character guaranteed not to appear in `s` (prevents the prefix/suffix match from crossing over between `s` and its reverse in an invalid way). Compute the LPS array of `combined`. The last value, `lps[combined.Length - 1]`, is the length of the longest prefix of `s` that is also a suffix of `reverse(s)` — which is exactly the longest palindromic prefix of `s` (because a suffix of `reverse(s)` equal to some prefix of `s` means that prefix reads the same forwards as it does from the reversed string, i.e., it's a palindrome). The answer is `n - lps[last]`.
+
+**Logic (Steps):**
+1. Compute `reversed = reverse(s)`.
+2. Build `combined = s + "#" + reversed`.
+3. Run `BuildLpsArray(combined)` (same LPS construction as the KMP algorithm).
+4. Read `longestPalindromicPrefix = lps[combined.Length - 1]`.
+5. Return `n - longestPalindromicPrefix` as the number of characters to prepend.
 
 ```csharp
 using System;
@@ -388,33 +406,9 @@ public class MinCharsPalindromeOptimized
 Time Complexity: O(n) — building the combined string of length `2n + 1` and its LPS array is linear.
 Space Complexity: O(n) for the combined string and the LPS array.
 
-**Explanation:**
-Dry run on `s = "aacecaaa"` (n = 8):
+**Walkthrough:** For `s = "abcd"` (n=4): `reversed = "dcba"`, `combined = "abcd#dcba"` (length 9). Building its LPS array: `lps[0]=0`; `i=1` `'b'` vs `combined[0]='a'` mismatches → `lps[1]=0`; `i=2` `'c'` vs `'a'` mismatches → `lps[2]=0`; `i=3` `'d'` vs `'a'` mismatches → `lps[3]=0`; `i=4` `'#'` vs `'a'` mismatches → `lps[4]=0`; `i=5` `'d'` vs `'a'` mismatches → `lps[5]=0`; `i=6` `'c'` vs `'a'` mismatches → `lps[6]=0`; `i=7` `'b'` vs `'a'` mismatches → `lps[7]=0`; `i=8` `'a'` vs `combined[0]='a'` matches → `len=1, lps[8]=1`. Final `lps[8]=1`, so the longest palindromic prefix of `s` has length `1` (just `"a"`). Answer = `n - 1 = 4 - 1 = 3`, matching the expected Output.
 
-- `reverse(s) = "aaacecaa"`.
-- `combined = "aacecaaa" + "#" + "aaacecaa" = "aacecaaa#aaacecaa"` (length 17).
-
-Building the LPS array of `combined` step by step (indices 0..16, characters: `a a c e c a a a # a a a c e c a a`):
-
-- `lps[0]=0`. `len=0`.
-- `i=1`: `combined[1]='a'` vs `combined[0]='a'` → match, `len=1`, `lps[1]=1`.
-- `i=2`: `combined[2]='c'` vs `combined[1]='a'` → mismatch, `len=lps[0]=0`; retry `'c'` vs `combined[0]='a'` → mismatch, `lps[2]=0`.
-- `i=3`: `'e'` vs `combined[0]='a'` → mismatch, `lps[3]=0`.
-- `i=4`: `'c'` vs `combined[0]='a'` → mismatch, `lps[4]=0`.
-- `i=5`: `'a'` vs `combined[0]='a'` → match, `len=1`, `lps[5]=1`.
-- `i=6`: `'a'` vs `combined[len=1]='a'` → match, `len=2`, `lps[6]=2`.
-- `i=7`: `'a'` vs `combined[len=2]='c'` → mismatch, `len=lps[1]=1`; retry `'a'` vs `combined[1]='a'` → match, `len=2`, `lps[7]=2`.
-- `i=8`: `'#'` vs `combined[len=2]='c'` → mismatch, `len=lps[1]=1`; retry `'#'` vs `combined[1]='a'` → mismatch, `len=lps[0]=0`; retry `'#'` vs `combined[0]='a'` → mismatch, `lps[8]=0`.
-- `i=9`: `'a'` vs `combined[0]='a'` → match, `len=1`, `lps[9]=1`.
-- `i=10`: `'a'` vs `combined[len=1]='a'` → match, `len=2`, `lps[10]=2`.
-- `i=11`: `'a'` vs `combined[len=2]='c'` → mismatch, `len=lps[1]=1`; retry `'a'` vs `combined[1]='a'` → match, `len=2`, `lps[11]=2`.
-- `i=12`: `'c'` vs `combined[len=2]='c'` → match, `len=3`, `lps[12]=3`.
-- `i=13`: `'e'` vs `combined[len=3]='e'` → match, `len=4`, `lps[13]=4`.
-- `i=14`: `'c'` vs `combined[len=4]='c'` → match, `len=5`, `lps[14]=5`.
-- `i=15`: `'a'` vs `combined[len=5]='a'` → match, `len=6`, `lps[15]=6`.
-- `i=16`: `'a'` vs `combined[len=6]='a'` → match, `len=7`, `lps[16]=7`.
-
-Final value: `lps[16] = 7`. This means the longest palindromic prefix of `s` has length `7` (`"aacecaa"`, which indeed reads the same forwards and backwards). The answer is `n - lps[last] = 8 - 7 = 1`: only one character (`'a'`, the reverse of the leftover suffix `"a"`) needs to be added in front, giving `"a" + "aacecaaa" = "aaacecaaa"`, a palindrome.
+---
 
 ## 4. Rabin-Karp Algorithm (String Matching Using Rolling Hash)
 
@@ -430,6 +424,12 @@ Given a `text` and a `pattern`, find all starting indices where `pattern` occurs
 
 **Brute Force Approach:**
 Same naive sliding-window character comparison as before, without any hashing.
+
+**Logic (Steps):**
+1. Loop `i` from `0` to `n - m`, trying each alignment.
+2. Compare `text[i+j]` with `pattern[j]` for increasing `j` until mismatch or `j == m`.
+3. If `j == m`, record `i` as a match.
+4. Repeat for the next `i`.
 
 ```csharp
 using System;
@@ -463,6 +463,10 @@ public class RabinKarpBruteForce
 Time Complexity: O(n*m) worst case.
 Space Complexity: O(1) extra.
 
+**Walkthrough:** With `text = "abcabcabc"`, `pattern = "cab"`: at `i=0` window `"abc"` vs `"cab"` mismatches at `j=0`. At `i=1` window `"bca"` mismatches at `j=0`. At `i=2` window `"cab"` matches all three characters, `j` reaches `m=3`, record `2`. Continuing through `i=3,4`, then `i=5` window `"cab"` again matches, record `5`. Final result `[2, 5]`, matching the expected Output.
+
+---
+
 **Optimized Approach:**
 Use a polynomial rolling hash:
 - Treat the pattern/window as a number in some base `b` (e.g. 26 or 256) modulo a large prime `p` (to keep hash values bounded and reduce collisions): `hash = s[0]*b^(m-1) + s[1]*b^(m-2) + ... + s[m-1]*b^0 (mod p)`.
@@ -470,6 +474,13 @@ Use a polynomial rolling hash:
 - To move the window from index `i` to `i+1`, remove the contribution of the outgoing character `text[i]` and add the incoming character `text[i+m]`, all in O(1):
   `newHash = ((oldHash - text[i]*b^(m-1)) * b + text[i+m]) mod p`.
 - Whenever `windowHash == patternHash`, do a full character-by-character comparison to confirm the match (protects against hash collisions where different substrings hash to the same value).
+
+**Logic (Steps):**
+1. Compute `highestPower = Base^(m-1) mod Mod`, used to remove the leading character's contribution when rolling.
+2. Compute `patternHash` and the initial `windowHash` (for `text[0..m-1]`) in O(m).
+3. For each window position `i`, if `patternHash == windowHash`, verify with a direct substring comparison and record `i` on a true match.
+4. Roll `windowHash` forward: subtract `text[i] * highestPower`, multiply by `Base`, add `text[i+m]`, all modulo `Mod`.
+5. Repeat until all windows from `0` to `n-m` are checked.
 
 ```csharp
 using System;
@@ -529,18 +540,4 @@ public class RabinKarpOptimized
 Time Complexity: O(n + m) on average, since rolling the hash and comparing hash values is O(1) per window; worst case degrades to O(n*m) if many spurious hash collisions force repeated full-string verifications.
 Space Complexity: O(1) extra (excluding the output list) — only a constant number of hash variables are kept.
 
-**Explanation:**
-Dry run with `text = "abcabcabc"`, `pattern = "cab"` (using `Base = 256`, `Mod = 1,000,000,007` conceptually, but here we illustrate with the underlying idea rather than exact large numbers):
-
-- `m = 3`. `highestPower = Base^2 mod Mod`.
-- `patternHash` = hash of `"cab"` computed from characters `'c','a','b'`.
-- Initial `windowHash` = hash of `text[0..2] = "abc"`.
-- `i=0`: window is `"abc"`, hash differs from `patternHash` (`"cab"` ≠ `"abc"`) → no match. Roll: remove `text[0]='a'` contribution, add `text[3]='a'` → window becomes `"bca"`.
-- `i=1`: window is `"bca"`, hash differs from `patternHash` → no match. Roll: remove `text[1]='b'`, add `text[4]='b'` → window becomes `"cab"`.
-- `i=2`: window is `"cab"`, `windowHash == patternHash` → verify with `text.Substring(2,3) == "cab"` → true → record match at index `2`. Roll: remove `text[2]='c'`, add `text[5]='c'` → window becomes `"abc"`.
-- `i=3`: window `"abc"` → no match. Roll forward similarly.
-- `i=4`: window `"bca"` → no match. Roll forward.
-- `i=5`: window `"cab"` → hash matches, verify → true → record match at index `5`.
-- `i=6`: window `"abc"` → no match (loop ends since `i <= n-m = 6`).
-
-Final result: matches at indices `[2, 5]`, confirming the rolling hash correctly and efficiently locates both occurrences of `"cab"` while only needing full string verification at the two positions where the hash actually matched.
+**Walkthrough:** With `text = "abcabcabc"`, `pattern = "cab"`, `m=3`: initial `windowHash` = hash of `"abc"`, `patternHash` = hash of `"cab"` — they differ, no match at `i=0`. Roll forward (remove `text[0]='a'`, add `text[3]='a'`) → window `"bca"`; hash still differs at `i=1`. Roll again (remove `text[1]='b'`, add `text[4]='b'`) → window `"cab"`; at `i=2`, `windowHash == patternHash`, verify with `text.Substring(2,3) == "cab"` → true → record `2`. Continuing to roll, `i=3` gives `"abc"` (no match), `i=4` gives `"bca"` (no match), `i=5` gives `"cab"` again — hash matches, verified true, record `5`. Final result `[2, 5]`, matching the expected Output, with full string verification only performed at the two positions where the hash actually matched.

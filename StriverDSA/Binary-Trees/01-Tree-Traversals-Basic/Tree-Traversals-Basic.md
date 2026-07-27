@@ -39,6 +39,13 @@ All three DFS orders (preorder, inorder, postorder) visit every node exactly onc
 
 *Iterative (stack):* Use an explicit `Stack<TreeNode>`. Push the root. While the stack is not empty, pop a node, record its value, then push its right child first and its left child second (so the left child is popped and processed before the right child, preserving root-left-right order).
 
+**Logic (Steps):**
+1. *Recursive:* if `node == null`, return; otherwise record `node.val`, then recurse into `node.left`, then recurse into `node.right`.
+2. *Iterative:* push `root` onto the stack (if non-null).
+3. While the stack is non-empty, pop a node and record its value (this is the preorder visit).
+4. Push the popped node's right child first, then its left child, so the left child is popped and processed next.
+5. Repeat until the stack is empty; return the recorded values.
+
 ```csharp
 // Recursive
 public List<int> PreorderRecursive(TreeNode root) {
@@ -78,14 +85,14 @@ public List<int> PreorderIterative(TreeNode root) {
 Time Complexity: O(n) — every node is visited and processed exactly once.
 Space Complexity: O(h) for the recursion call stack / explicit stack in the average/best case (h = height of the tree), which degrades to O(n) for a skewed tree; ignoring the output list, the auxiliary stack never holds more than O(h) nodes on a balanced tree but can hold up to O(n) on a completely unbalanced (skewed) one.
 
-**Explanation:** (Iterative dry run of inorder and the combined single-stack technique are covered in detail in problems 2 and 5 below; here we dry run preorder briefly.) Consider the tree `[1, null, 2, 3]`: `1` has no left child and right child `2`; `2` has left child `3`.
+**Walkthrough:** (Iterative dry run of inorder and the combined single-stack technique are covered in detail in problems 2 and 5 below; here we dry run preorder briefly.) Consider the tree `[1, null, 2, 3]`: `1` has no left child and right child `2`; `2` has left child `3`.
 
 Stack starts as `[1]`.
 1. Pop `1` → result = `[1]`. Push right (`2`), push left (`null`, skipped). Stack = `[2]`.
 2. Pop `2` → result = `[1, 2]`. Push right (`null`, skipped), push left (`3`). Stack = `[3]`.
 3. Pop `3` → result = `[1, 2, 3]`. No children. Stack = `[]`.
 
-Final result: `[1, 2, 3]`.
+Final result: `[1, 2, 3]`, matching the expected output.
 
 ---
 
@@ -103,6 +110,13 @@ Final result: `[1, 2, 3]`.
 *Recursive:* Recursively traverse the left subtree, visit the current node's value, then recursively traverse the right subtree.
 
 *Iterative (stack):* Use a `Stack<TreeNode>` and a `current` pointer starting at the root. Repeatedly push nodes while moving left as far as possible. When you can't go further left, pop a node, record its value, then move to its right child and repeat. This mimics the recursive call stack: pushing simulates "descending" into the left recursive call, and popping simulates "returning" to process the node and then descend right.
+
+**Logic (Steps):**
+1. *Recursive:* if `node == null`, return; otherwise recurse into `node.left`, then record `node.val`, then recurse into `node.right`.
+2. *Iterative:* start `current` at the root; loop while `current != null` or the stack is non-empty.
+3. Push nodes while moving left (`current = current.left`) until `current` is `null`.
+4. Pop the top of the stack, record its value (the inorder visit), then move `current = current.right` to resume the process on that subtree.
+5. Repeat until both `current` is `null` and the stack is empty; return the recorded values.
 
 ```csharp
 // Recursive

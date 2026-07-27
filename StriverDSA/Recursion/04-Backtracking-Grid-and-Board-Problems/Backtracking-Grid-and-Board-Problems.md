@@ -15,14 +15,15 @@
 - Output: `["DDRDRR", "DRDDRR"]`
 - Explanation: Starting at `(0,0)`, two distinct sequences of moves (D = Down, R = Right, and so on) reach `(3,3)` while only passing through cells marked `1` and never revisiting a cell. Every other combination of moves either walks into a `0` cell, walks off the grid, or loops back onto a visited cell, so those branches are abandoned.
 
-**Approach:** This is the canonical backtracking template applied to grid traversal:
-1. **Try a choice** — from the current cell, attempt to move in each allowed direction (Down, Left, Up, Right, in whatever priority order the problem wants the output sorted).
-2. **Validity check (pruning)** — before recursing into a neighbor cell `(newRow, newCol)`, confirm it is in-bounds (`0 <= newRow < n` and `0 <= newCol < n`), that the cell is open (`grid[newRow][newCol] == 1`), and that it has not already been visited in the current path (`!visited[newRow][newCol]`). If any check fails, that branch is pruned immediately — no recursive call is made.
-3. **Mark visited / place the move** — mark the cell visited and append the move character to the path string.
-4. **Recurse** — call the same function on the neighbor. If the neighbor is the destination, record the accumulated path as one valid answer.
-5. **Undo (backtrack)** — after the recursive call returns (regardless of whether it found paths or not), unmark the cell (`visited[newRow][newCol] = false`) and remove the move character from the path, so that the cell is free to be tried again via a different route from a different ancestor.
+**Backtracking Approach:** This is the canonical backtracking template applied to grid traversal — try each direction, prune invalid moves, recurse, then undo the move so the cell is free for other paths.
 
-This mark-recurse-unmark cycle is what allows the same cell to be explored as part of many different candidate paths without contaminating sibling branches.
+**Logic (Steps):**
+1. **Base case** — if the current cell `(row, col)` equals the destination `(n-1, n-1)`, record the accumulated `path` string into `result` and return.
+2. **Mark visited** — mark the current cell visited before exploring its neighbors.
+3. **Try a choice** — from the current cell, attempt to move in each allowed direction (Down, Left, Right, Up, in that priority order).
+4. **Validity check (pruning)** — before recursing into a neighbor cell `(newRow, newCol)`, confirm it is in-bounds (`0 <= newRow < n` and `0 <= newCol < n`), that the cell is open (`grid[newRow][newCol] == 1`), and that it has not already been visited in the current path (`!visited[newRow][newCol]`). If any check fails, that branch is pruned immediately — no recursive call is made.
+5. **Place the move / recurse** — append the move character to `path`, call `Solve` on the neighbor.
+6. **Undo (backtrack)** — after the recursive call returns, remove the move character from `path`; once all 4 directions have been tried from the current cell, unmark it (`visited[row, col] = false`) so it can be reused by a different route from a different ancestor.
 
 ```csharp
 public class RatInMaze
@@ -83,8 +84,20 @@ public class RatInMaze
 }
 ```
 
-**Time Complexity:** `O(4^(n*n))` in the absolute worst case, since at every cell up to 4 directions can be tried and a path can theoretically wander through all `n*n` cells before dead-ending. In practice, the "not visited" and "cell is open" checks prune the vast majority of branches almost immediately, so real runtimes on typical mazes are far smaller than the theoretical bound.
-**Space Complexity:** `O(n*n)` for the visited matrix and the recursion stack depth (path length is bounded by the number of cells), plus the space needed to store the output paths.
+Time Complexity: `O(4^(n*n))` in the absolute worst case, since at every cell up to 4 directions can be tried and a path can theoretically wander through all `n*n` cells before dead-ending. In practice, the "not visited" and "cell is open" checks prune the vast majority of branches almost immediately, so real runtimes on typical mazes are far smaller than the theoretical bound.
+Space Complexity: `O(n*n)` for the visited matrix and the recursion stack depth (path length is bounded by the number of cells), plus the space needed to store the output paths.
+
+**Walkthrough:** Using the 3x3 grid `[[1,0,0],[1,1,0],[0,1,1]]`, start at `(0,0)`, destination `(2,2)`.
+- At `(0,0)`: mark visited, `path=""`. Try Down → `(1,0)` valid (`grid=1`, unvisited). Choose it, `path="D"`.
+- At `(1,0)`: mark visited. Down → `(2,0)` has `grid=0`, prune. Left → out of bounds, prune. Right → `(1,1)` valid. Choose it, `path="DR"`.
+- At `(1,1)`: mark visited. Down → `(2,1)` valid. Choose it, `path="DRD"`.
+- At `(2,1)`: mark visited. Down → out of bounds, prune. Left → `(2,0)` has `grid=0`, prune. Right → `(2,2)` valid and is the destination! Choose it, `path="DRDR"`.
+- At `(2,2)`: base case hit (`row==n-1 && col==n-1`) → `result.Add("DRDR")`.
+- Backtrack: unmark `(2,2)`, remove 'R' → back at `(2,1)`. No other direction works (Up revisits `(1,1)`) → unmark `(2,1)`, remove 'D' → back at `(1,1)`.
+- At `(1,1)`: remaining directions (Left, Right, Up) all prune (visited or `grid=0`) → unmark `(1,1)`, remove 'D' → back at `(1,0)`, then unwind fully back to `(0,0)` where no other direction is valid.
+- Final `result = ["DRDR"]`, matching the single expected path.
+
+---
 
 ## 2. Word Search
 
@@ -103,12 +116,15 @@ public class RatInMaze
 - Output: `true`
 - Explanation: Starting at `board[0][0] = 'A'`, moving right to `'B'`, right to `'C'`, down to `'C'`, down to `'E'`, left to `'D'` spells `"ABCCED"` using each cell at most once, so the word is found.
 
-**Approach:** Same backtracking skeleton, adapted to a 2D character grid with word-index matching:
-1. **Try a starting cell** — for every cell `(r, c)` in the board, attempt to match `word[0]` there and launch a DFS.
-2. **Validity check (pruning)** — at each recursive step matching `word[k]` at cell `(r, c)`: the cell must be in bounds, must not already be used in the current path, and `board[r][c]` must equal `word[k]`. If any of these fail, prune (return false) without recursing further.
-3. **Mark visited by mutating the board** — instead of a separate boolean matrix, a common idiomatic trick is to temporarily overwrite `board[r][c]` with a sentinel character (e.g. `'#'`) that cannot match any letter, which cheaply marks the cell as "in use" without extra memory.
-4. **Recurse** — try all 4 neighboring directions looking for `word[k+1]`. If `k` reaches `word.Length - 1` with a match, the word is found.
-5. **Undo (backtrack)** — after exploring all neighbors from `(r, c)`, restore `board[r][c]` to its original character before returning, so the cell is available again for other starting points or other branches of the search.
+**Backtracking Approach:** Same backtracking skeleton as the maze problem, adapted to a 2D character grid with word-index matching, using the board itself as the visited marker.
+
+**Logic (Steps):**
+1. **Try a starting cell** — for every cell `(r, c)` in the board, attempt to match `word[0]` there and launch a DFS via `Backtrack`.
+2. **Base case** — if `index == word.Length`, every character has matched, so return `true`.
+3. **Validity check (pruning)** — at each recursive step matching `word[index]` at cell `(r, c)`: the cell must be in bounds and `board[r][c]` must equal `word[index]`. If either fails, prune (return false) without recursing further.
+4. **Mark visited by mutating the board** — save `board[r][c]` as `original`, then temporarily overwrite it with the sentinel `'#'`, which cannot match any letter and so cheaply marks the cell as "in use" without extra memory.
+5. **Recurse** — try all 4 neighboring directions (down, up, right, left) looking for `word[index+1]`, short-circuiting with `||` as soon as one succeeds.
+6. **Undo (backtrack)** — after exploring all neighbors from `(r, c)`, restore `board[r][c] = original` before returning `found`, so the cell is available again for other starting points or other branches of the search.
 
 ```csharp
 public class WordSearch
@@ -159,8 +175,22 @@ public class WordSearch
 }
 ```
 
-**Time Complexity:** `O(n * m * 4^L)` where `n * m` is the board size and `L` is the length of `word`. Each of the `n*m` starting cells can branch into up to 4 directions at each of the `L` steps in the worst case. The immediate character-mismatch pruning (a wrong letter aborts a branch in `O(1)`) means that on real boards with varied letters, the vast majority of the `4^L` branches are cut off after just one or two characters, so actual performance is usually close to linear in board size.
-**Space Complexity:** `O(L)` for the recursion stack (depth equals word length); no extra visited matrix is needed since the board itself is mutated and restored.
+Time Complexity: `O(n * m * 4^L)` where `n * m` is the board size and `L` is the length of `word`. Each of the `n*m` starting cells can branch into up to 4 directions at each of the `L` steps in the worst case. The immediate character-mismatch pruning (a wrong letter aborts a branch in `O(1)`) means that on real boards with varied letters, the vast majority of the `4^L` branches are cut off after just one or two characters, so actual performance is usually close to linear in board size.
+Space Complexity: `O(L)` for the recursion stack (depth equals word length); no extra visited matrix is needed since the board itself is mutated and restored.
+
+**Walkthrough:** Using `board = [['A','B','C','E'],['S','F','C','S'],['A','D','E','E']]` and `word = "ABCCED"`.
+- `Exist` loops over all cells as potential starts; `(0,0) = 'A'` matches `word[0]`, so `Backtrack(board, word, 0, 0, 0)` is called.
+- `index=0`: `board[0][0]='A'==word[0]` → mark `board[0][0]='#'`, try neighbors for `index=1`.
+- Right neighbor `(0,1)='B'==word[1]` → mark `'#'`, try neighbors for `index=2`.
+- Right neighbor `(0,2)='C'==word[2]` → mark `'#'`, try neighbors for `index=3` (need `'C'` again).
+- Down neighbor `(1,2)='C'==word[3]` → mark `'#'`, try neighbors for `index=4` (need `'E'`).
+- Down neighbor `(2,2)='E'==word[4]` → mark `'#'`, try neighbors for `index=5` (need `'D'`).
+- Left neighbor `(2,1)='D'==word[5]` → mark `'#'`, try neighbors for `index=6`.
+- `index==word.Length (6)` → base case returns `true` immediately, which short-circuits all the `||` chains back up the stack — none of the boards get restored because the function returns before the undo line executes on the success path, but that's fine since the caller (`Exist`) already has its answer.
+- If instead the down neighbor at `(1,2)` had NOT been `'C'` (a wrong branch), that recursive call would return `false` at the mismatch check, and the code would restore `board[1][2]` back to its original letter (backtrack) before trying the next of the 4 directions.
+- Final result: `Exist` returns `true`, matching the expected output.
+
+---
 
 ## 3. M-Coloring Problem
 
@@ -171,12 +201,14 @@ public class WordSearch
 - Output: `true`, with one valid coloring `color = [1, 2, 1, 2]` (1-indexed colors)
 - Explanation: Vertex 0 gets color 1, vertex 1 (adjacent to 0) gets color 2, vertex 2 (adjacent to 0 and 1) needs a third distinct... but since 2 is adjacent to 0 (color 1) it can reuse color 1, and vertex 3 (adjacent to 2 and 0, both color 1) gets color 2. No two adjacent vertices end up with the same color, and only 2 of the allowed 3 colors were needed, so a valid coloring exists.
 
-**Approach:** Backtracking over vertices, trying every color at each step:
-1. **Try a choice** — process vertices in order `0, 1, ..., V-1`. For the current vertex, try assigning each color from `1` to `M` in turn.
-2. **Validity check (pruning)** — before committing a color to the current vertex, check every other vertex that is adjacent to it (via the adjacency matrix/list) and confirm none of them already has that same color. If any adjacent vertex shares the candidate color, this color choice is invalid and is skipped without recursing.
-3. **Place the value** — assign the candidate color to the current vertex's slot in the `color[]` array.
-4. **Recurse** — move on to color the next vertex (`vertex + 1`). If all `V` vertices get colored successfully, a valid coloring has been found.
-5. **Undo (backtrack)** — if the recursive call on the next vertex fails to find a valid coloring for the rest of the graph, reset the current vertex's color back to `0` (uncolored) and try the next candidate color; if all `M` colors have been tried and none work, return `false` so the caller (the previous vertex) backtracks and tries a different color for itself.
+**Backtracking Approach:** Backtracking over vertices in order, trying every color at each step and checking adjacency conflicts before committing.
+
+**Logic (Steps):**
+1. **Base case** — if `vertex == v`, every vertex has been successfully colored, so return `true`.
+2. **Try a choice** — for the current `vertex`, try assigning each color `c` from `1` to `m` in turn.
+3. **Validity check (pruning)** — call `IsSafe`, which scans every other vertex `i` and confirms that if `graph[vertex, i]` is an edge, `color[i]` is not already the candidate color. If any adjacent vertex shares the candidate color, this color choice is invalid and is skipped without recursing.
+4. **Place the value / recurse** — assign `color[vertex] = c`, then recurse into `SolveColoring(..., vertex + 1)`. If it returns `true`, propagate `true` immediately.
+5. **Undo (backtrack)** — if the recursive call fails, reset `color[vertex] = 0` and try the next candidate color; if all `m` colors have been tried and none work, return `false` so the caller (the previous vertex in the call stack) backtracks and tries a different color for itself.
 
 ```csharp
 public class MColoring
@@ -222,8 +254,18 @@ public class MColoring
 }
 ```
 
-**Time Complexity:** `O(M^V)` in the worst case, since each of the `V` vertices can be tried with up to `M` colors, and the `IsSafe` adjacency check costs `O(V)` per attempt, giving `O(V * M^V)` overall. The adjacency-conflict pruning cuts off a branch the moment two adjacent vertices would clash, so dense or highly constrained graphs (which is most real inputs) are resolved far faster than the raw exponential bound suggests, because entire subtrees of color assignments become invalid after very few vertices are placed.
-**Space Complexity:** `O(V)` for the `color[]` array and the recursion stack (depth equals `V`), plus `O(V^2)` if the graph itself is stored as an adjacency matrix.
+Time Complexity: `O(M^V)` in the worst case, since each of the `V` vertices can be tried with up to `M` colors, and the `IsSafe` adjacency check costs `O(V)` per attempt, giving `O(V * M^V)` overall. The adjacency-conflict pruning cuts off a branch the moment two adjacent vertices would clash, so dense or highly constrained graphs (which is most real inputs) are resolved far faster than the raw exponential bound suggests, because entire subtrees of color assignments become invalid after very few vertices are placed.
+Space Complexity: `O(V)` for the `color[]` array and the recursion stack (depth equals `V`), plus `O(V^2)` if the graph itself is stored as an adjacency matrix.
+
+**Walkthrough:** Using `V=4` with edges `(0,1), (1,2), (2,3), (3,0), (0,2)` and `M=3`.
+- `vertex=0`: try `c=1`. `IsSafe` finds no colored neighbors yet → safe. `color=[1,0,0,0]`. Recurse to `vertex=1`.
+- `vertex=1`: try `c=1`. Vertex 1 is adjacent to vertex 0 (`color[0]=1`) → conflict, unsafe. Try `c=2`. No adjacent vertex has color 2 → safe. `color=[1,2,0,0]`. Recurse to `vertex=2`.
+- `vertex=2`: try `c=1`. Vertex 2 is adjacent to 0 (`color=1`, conflict) → unsafe. Try `c=2`. Vertex 2 is adjacent to 1 (`color=2`, conflict) → unsafe. Try `c=3`. No adjacent vertex has color 3 → safe. `color=[1,2,3,0]`. Recurse to `vertex=3`.
+- `vertex=3`: try `c=1`. Vertex 3 is adjacent to 2 (`color=3`, fine) and 0 (`color=1`, conflict) → unsafe. Try `c=2`. Vertex 3 is adjacent to 2 (`color=3`, fine) and 0 (`color=1`, fine) → safe. `color=[1,2,3,2]`. Recurse to `vertex=4`.
+- `vertex=4 == v` → base case, return `true` all the way up the call stack without ever needing to backtrack.
+- `GraphColoring` returns `true` with a valid coloring found (colors used may differ slightly from the example's `[1,2,1,2]` depending on tie-breaking, but both are valid 3-colorings satisfying every edge constraint).
+
+---
 
 ## 4. Sudoku Solver
 
@@ -234,12 +276,15 @@ public class MColoring
 - Output: the same board with every `'.'` replaced by a digit `1-9` such that all Sudoku constraints hold, e.g. row 0 becomes `"534678912"`.
 - Explanation: Each empty cell is filled with the unique digit that satisfies its row, column, and 3x3 box, discovered by trying digits and backtracking whenever a choice leads to a dead end elsewhere on the board.
 
-**Approach:** Backtracking cell by cell over the empty positions:
-1. **Try a choice** — scan the board for the next empty cell (`'.'`). For that cell, try digits `'1'` through `'9'` in order.
-2. **Validity check (pruning)** — for each candidate digit, call `IsValid(board, row, col, digit)`, which checks three constraints: (a) the digit does not already appear anywhere in `row`, (b) the digit does not already appear anywhere in `col`, and (c) the digit does not already appear in the `3x3` box containing `(row, col)` (found via `boxRow = row - row % 3`, `boxCol = col - col % 3`). If any of the three checks fails, the digit is skipped.
-3. **Place the value** — write the valid digit into `board[row][col]`.
-4. **Recurse** — attempt to solve the rest of the board from the next empty cell. If the recursive call succeeds, propagate success upward immediately.
-5. **Undo (backtrack)** — if no subsequent placement leads to a full solution, reset `board[row][col]` back to `'.'` and try the next candidate digit; if all 9 digits fail for this cell, return `false`, forcing the previous cell in the call stack to try its next digit instead.
+**Backtracking Approach:** Backtracking cell by cell over the empty positions, trying every digit and pruning against row/column/box constraints.
+
+**Logic (Steps):**
+1. **Find the next empty cell** — scan the board row by row, column by column, for the next cell where `board[row][col] == '.'`.
+2. **Base case** — if the scan completes with no empty cell found, the board is fully and validly solved, so return `true`.
+3. **Try a choice** — for that empty cell, try digits `'1'` through `'9'` in order.
+4. **Validity check (pruning)** — for each candidate digit, call `IsValid(board, row, col, digit)`, which checks three constraints in one loop over `i = 0..8`: (a) the digit does not already appear anywhere in `row`, (b) the digit does not already appear anywhere in `col`, and (c) the digit does not already appear in the `3x3` box containing `(row, col)` (found via `boxRow = row - row % 3`, `boxCol = col - col % 3`). If any check fails, the digit is skipped.
+5. **Place the value / recurse** — write the valid digit into `board[row][col]` and recurse on the rest of the board. If the recursive call succeeds, propagate success upward immediately.
+6. **Undo (backtrack)** — if no subsequent placement leads to a full solution, reset `board[row][col]` back to `'.'` and try the next candidate digit; if all 9 digits fail for this cell, return `false`, forcing the previous cell in the call stack to try its next digit instead.
 
 ```csharp
 public class SudokuSolver
@@ -295,44 +340,14 @@ public class SudokuSolver
 }
 ```
 
-**Time Complexity:** Roughly `O(9^(number of empty cells))` in the worst case, since each empty cell could in principle try up to 9 digits before the recursion resolves. In practice, `IsValid` prunes invalid digits in `O(1)`-ish amortized time (each check is `O(9)` over row/col/box), and as the board fills up, constraints cascade — most cells end up with only one or two legal digits — so real Sudoku puzzles solve almost instantly instead of exploring anywhere near the theoretical exponential bound.
-**Space Complexity:** `O(1)` extra space beyond the board itself (aside from the recursion stack), since validity checks scan fixed-size rows/columns/boxes; recursion depth is bounded by the number of empty cells (at most 81).
+Time Complexity: Roughly `O(9^(number of empty cells))` in the worst case, since each empty cell could in principle try up to 9 digits before the recursion resolves. In practice, `IsValid` prunes invalid digits in `O(1)`-ish amortized time (each check is `O(9)` over row/col/box), and as the board fills up, constraints cascade — most cells end up with only one or two legal digits — so real Sudoku puzzles solve almost instantly instead of exploring anywhere near the theoretical exponential bound.
+Space Complexity: `O(1)` extra space beyond the board itself (aside from the recursion stack), since validity checks scan fixed-size rows/columns/boxes; recursion depth is bounded by the number of empty cells (at most 81).
 
-## Explanation — Dry Runs
-
-**Rat in a Maze dry run on a 3x3 grid:**
-
-Consider the grid:
-```
-1 0 0
-1 1 0
-0 1 1
-```
-Start at `(0,0)`, destination `(2,2)`. Directions tried in order Down, Left, Right, Up.
-
-- At `(0,0)`: mark visited, path = "". Try Down → `(1,0)` is valid (`grid=1`, unvisited). Choose it, path = "D".
-- At `(1,0)`: mark visited. Try Down → `(2,0)` has `grid=0` → invalid, prune. Try Left → `(1,-1)` out of bounds → prune. Try Right → `(1,1)` valid (`grid=1`, unvisited). Choose it, path = "DR".
-- At `(1,1)`: mark visited. Try Down → `(2,1)` valid (`grid=1`, unvisited). Choose it, path = "DRD".
-- At `(2,1)`: mark visited. Try Down → `(3,1)` out of bounds → prune. Try Left → `(2,0)` has `grid=0` → prune. Try Right → `(2,2)` valid and is the destination! Choose it, path = "DRDR".
-- At `(2,2)`: this is `(n-1, n-1)` → base case hit, record path "DRDR" into results.
-- Backtrack: unmark `(2,2)`, remove 'R' from path → back to `(2,1)` with path "DRD". No more directions to try from `(2,1)` (Up would go back to `(1,1)`, already visited) → unmark `(2,1)`, remove 'D' from path → back to `(1,1)` with path "DR".
-- At `(1,1)`: continue trying remaining directions after Down — Left → `(1,0)` already visited → prune. Right → `(1,2)` has `grid=0` → prune. Up → `(0,1)` has `grid=0` → prune. All options exhausted → unmark `(1,1)`, remove 'D' from path → back to `(1,0)` with path "D".
-- At `(1,0)`: continue after Right — Up → `(0,0)` already visited → prune. All options exhausted → unmark `(1,0)`, remove 'R' then 'D' as the stack unwinds → back to `(0,0)`.
-- At `(0,0)`: continue trying remaining directions after Down — Left/Right go out of bounds, Up goes out of bounds → all exhausted → unmark `(0,0)`, function returns.
-
-Final result: `["DRDR"]` — one path found, with a dead end at `(1,1)` (after reaching it a second logical route) correctly abandoned via backtracking.
-
-**Sudoku `IsValid(board, row, col, digit)` dry run:**
-
-Suppose we are trying to place digit `'4'` at `row = 4, col = 5` on a partially filled board.
-
-1. Compute box anchor: `boxRow = 4 - 4 % 3 = 3`, `boxCol = 5 - 5 % 3 = 3`. So the relevant 3x3 box spans rows 3-5, columns 3-5.
-2. Loop `i` from 0 to 8:
-   - Row check: examine `board[4][0], board[4][1], ..., board[4][8]`. Suppose `board[4][2] = '4'` already. As soon as `i = 2` is reached, `board[row][i] == digit` is true → return `false` immediately.
-3. Because the row check already failed, the column check and box check are never reached for this attempt — the function short-circuits and reports the placement invalid.
-
-Now suppose instead the row had no `'4'`, e.g. row 4 contains `"...4..."` was actually `"...5..."` (no 4 present):
-1. Row check passes for all `i` (no `board[4][i] == '4'`).
-2. Column check: examine `board[0][5], board[1][5], ..., board[8][5]`. Suppose none equal `'4'` → passes.
-3. Box check: examine the 3x3 box starting at `(3,3)`, i.e., cells `(3,3),(3,4),(3,5),(4,3),(4,4),(4,5),(5,3),(5,4),(5,5)` via the index formula `board[boxRow + i/3][boxCol + i%3]`. Suppose none of these equal `'4'` → passes.
-4. All three checks pass → `IsValid` returns `true`, and the solver proceeds to place `'4'` at `board[4][5]` and recurse into the next empty cell.
+**Walkthrough:** Using the example board where row 0 = `"53..7...."` and the target output row 0 = `"534678912"`.
+- `Solve` scans and finds the first empty cell, `board[0][2] = '.'` (third character of row 0).
+- Try digit `'1'`: `IsValid` checks row 0 (`'5'` and `'3'` present, no `'1'`) → passes row check; suppose column 2 and its 3x3 box also contain no `'1'` → `IsValid` returns `true`. Place `board[0][2] = '1'` and recurse.
+- Deep in the recursion, further down the board, some later cell finds that every digit `1`-`9` fails `IsValid` (all conflict with existing digits) — that inner call returns `false`, propagating back.
+- Back at `board[0][2]`, the placement of `'1'` is undone (`board[0][2] = '.'`) since it didn't lead to a full solution, and the next candidate is tried.
+- Eventually digit `'4'` is tried at `board[0][2]`: `IsValid(board, 0, 2, '4')` computes `boxRow = 0 - 0%3 = 0`, `boxCol = 2 - 2%3 = 0`, checks row 0, column 2, and box (0,0)-(2,2) — none contain `'4'` → valid. Place `'4'`, and this choice (combined with all subsequent cells resolving consistently) leads all the way to a full board.
+- `Solve` returns `true` at every level once the last empty cell is filled (no `'.'` remains), so no further backtracking occurs on the successful path.
+- Final board matches the expected output, with row 0 becoming `"534678912"` — the `'.'` at index 2 correctly resolved to `'4'`.
